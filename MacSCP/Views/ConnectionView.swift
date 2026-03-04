@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum SidebarTab: String, CaseIterable {
+    case sshConfig = "SSH Config"
+    case saved = "Saved"
+}
+
 struct ConnectionView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
     @Environment(\.dismiss) private var dismiss
@@ -9,6 +14,9 @@ struct ConnectionView: View {
     @State private var isTesting = false
     @State private var testResult: String?
     @State private var selectedSaved: ServerConnection?
+    @State private var sidebarTab: SidebarTab = .sshConfig
+    @State private var sshConfigHosts: [SSHConfigHost] = []
+    @State private var configSearchText = ""
 
     var onConnect: (ServerConnection, String?) -> Void
 
@@ -28,9 +36,9 @@ struct ConnectionView: View {
             Divider()
 
             HStack(spacing: 0) {
-                // Saved connections sidebar
-                savedConnectionsList
-                    .frame(width: 200)
+                // Sidebar with tabs
+                sidebarView
+                    .frame(width: 220)
 
                 Divider()
 
@@ -47,6 +55,12 @@ struct ConnectionView: View {
                     testConnection()
                 }
                 .disabled(connection.host.isEmpty || connection.username.isEmpty || isTesting)
+
+                if isTesting {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .frame(width: 16, height: 16)
+                }
 
                 if let result = testResult {
                     Text(result)
@@ -72,52 +86,251 @@ struct ConnectionView: View {
             }
             .padding()
         }
-        .frame(width: 650, height: 450)
+        .frame(width: 720, height: 520)
+        .onAppear {
+            sshConfigHosts = SSHConfigParser.parse()
+        }
     }
 
-    private var savedConnectionsList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Saved")
-                .font(.headline)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+    // MARK: - Sidebar
+
+    private var sidebarView: some View {
+        VStack(spacing: 0) {
+            // Tab picker
+            Picker("", selection: $sidebarTab) {
+                ForEach(SidebarTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(8)
 
             Divider()
 
-            if connectionManager.savedConnections.isEmpty {
-                VStack {
-                    Spacer()
-                    Text("No saved connections")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-            } else {
-                List(connectionManager.savedConnections, selection: $selectedSaved) { saved in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(saved.displayName)
-                            .font(.body.bold())
-                        Text("\(saved.host):\(saved.port)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 2)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        connection = saved
-                        selectedSaved = saved
-                    }
-                    .contextMenu {
-                        Button("Delete", role: .destructive) {
-                            connectionManager.deleteConnection(saved)
-                        }
-                    }
-                }
-                .listStyle(.sidebar)
+            switch sidebarTab {
+            case .sshConfig:
+                sshConfigList
+            case .saved:
+                savedConnectionsList
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
     }
+
+    // MARK: - SSH Config Hosts
+
+    private var sshConfigList: some View {
+        VStack(spacing: 0) {
+            // Search
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+                TextField("Filter hosts...", text: $configSearchText)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+                if !configSearchText.isEmpty {
+                    Button(action: { configSearchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .textBackgroundColor))
+
+            Divider()
+
+            if filteredConfigHosts.isEmpty {
+                VStack {
+                    Spacer()
+                    Image(systemName: "terminal")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                    Text("No SSH hosts found")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("~/.ssh/config")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(filteredConfigHosts) { host in
+                            sshConfigRow(host)
+                            Divider().padding(.leading, 32)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            HStack {
+                Image(systemName: "info.circle")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text("\(sshConfigHosts.count) hosts from ~/.ssh/config")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func sshConfigRow(_ host: SSHConfigHost) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: host.identityFile != nil ? "key.fill" : "terminal.fill")
+                .font(.system(size: 12))
+                .foregroundColor(host.identityFile != nil ? .orange : .blue)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(host.alias)
+                    .font(.body.bold())
+                    .lineLimit(1)
+
+                HStack(spacing: 4) {
+                    if !host.user.isEmpty {
+                        Text(host.user)
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                    }
+                    if host.alias != host.hostname {
+                        Text(host.hostname)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    if host.port != 22 {
+                        Text(":\(host.port)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .background(
+            connection.host == host.hostname && connection.username == host.user
+                ? Color.accentColor.opacity(0.15)
+                : Color.clear
+        )
+        .cornerRadius(4)
+        .onTapGesture {
+            selectSSHConfigHost(host)
+        }
+        .onTapGesture(count: 2) {
+            selectSSHConfigHost(host)
+            // Quick connect on double-click
+            let pwd: String? = nil
+            connectionManager.saveConnection(connection)
+            dismiss()
+            onConnect(connection, pwd)
+        }
+    }
+
+    private func selectSSHConfigHost(_ host: SSHConfigHost) {
+        connection = host.toServerConnection()
+        testResult = nil
+    }
+
+    private var filteredConfigHosts: [SSHConfigHost] {
+        if configSearchText.isEmpty { return sshConfigHosts }
+        let query = configSearchText.lowercased()
+        return sshConfigHosts.filter {
+            $0.alias.lowercased().contains(query) ||
+            $0.hostname.lowercased().contains(query) ||
+            $0.user.lowercased().contains(query)
+        }
+    }
+
+    // MARK: - Saved Connections
+
+    private var savedConnectionsList: some View {
+        VStack(spacing: 0) {
+            if connectionManager.savedConnections.isEmpty {
+                VStack {
+                    Spacer()
+                    Image(systemName: "externaldrive.connected.to.line.below")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                    Text("No saved connections")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Connect to save")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(connectionManager.savedConnections) { saved in
+                            HStack(spacing: 8) {
+                                Image(systemName: "server.rack")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.accentColor)
+                                    .frame(width: 16)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(saved.displayName)
+                                        .font(.body.bold())
+                                        .lineLimit(1)
+                                    Text("\(saved.host):\(saved.port)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                            .background(
+                                selectedSaved?.id == saved.id
+                                    ? Color.accentColor.opacity(0.15)
+                                    : Color.clear
+                            )
+                            .cornerRadius(4)
+                            .onTapGesture {
+                                connection = saved
+                                selectedSaved = saved
+                                testResult = nil
+                            }
+                            .onTapGesture(count: 2) {
+                                connection = saved
+                                let pwd: String? = nil
+                                connectionManager.saveConnection(connection)
+                                dismiss()
+                                onConnect(connection, pwd)
+                            }
+                            .contextMenu {
+                                Button("Delete", role: .destructive) {
+                                    connectionManager.deleteConnection(saved)
+                                }
+                            }
+
+                            Divider().padding(.leading, 32)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Connection Form
 
     private var connectionForm: some View {
         Form {
@@ -171,6 +384,8 @@ struct ConnectionView: View {
         .formStyle(.grouped)
         .padding()
     }
+
+    // MARK: - Actions
 
     private func testConnection() {
         isTesting = true
