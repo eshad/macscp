@@ -51,10 +51,17 @@ actor SSHService {
 
         configurePasswordAuth(process: process)
 
-        try process.run()
+        do {
+            try process.run()
+        } catch {
+            throw SSHError.connectionFailed(error.localizedDescription)
+        }
+
+        // Use an actor-isolated flag to prevent double-resume
+        let guard_ = ContinuationGuard()
 
         return try await withCheckedThrowingContinuation { continuation in
-            let workItem = DispatchWorkItem {
+            DispatchQueue.global().async {
                 process.waitUntilExit()
 
                 let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
@@ -62,21 +69,24 @@ actor SSHService {
                 let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
                 let stderr = String(data: stderrData, encoding: .utf8) ?? ""
 
+                guard guard_.tryResume() else { return }
+
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: stdout)
                 } else {
-                    let errorMsg = stderr.isEmpty ? "SSH command failed with exit code \(process.terminationStatus)" : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let errorMsg = stderr.isEmpty
+                        ? "SSH command failed with exit code \(process.terminationStatus)"
+                        : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
                     continuation.resume(throwing: SSHError.commandFailed(errorMsg))
                 }
             }
 
-            DispatchQueue.global().async(execute: workItem)
-
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 if process.isRunning {
                     process.terminate()
-                    continuation.resume(throwing: SSHError.timeout)
                 }
+                guard guard_.tryResume() else { return }
+                continuation.resume(throwing: SSHError.timeout)
             }
         }
     }
@@ -119,6 +129,21 @@ actor SSHService {
         }
 
         return scriptPath.path
+    }
+}
+
+/// Thread-safe guard to ensure a continuation is only resumed once
+final class ContinuationGuard: @unchecked Sendable {
+    private var resumed = false
+    private let lock = NSLock()
+
+    /// Returns true if this is the first call (safe to resume). Returns false if already resumed.
+    func tryResume() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if resumed { return false }
+        resumed = true
+        return true
     }
 }
 
