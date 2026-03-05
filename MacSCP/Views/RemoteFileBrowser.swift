@@ -16,6 +16,8 @@ struct RemoteFileBrowser: View {
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
     @State private var isDropTargeted = false
+    @State private var pathHistory: [String] = []
+    @State private var pathForwardHistory: [String] = []
 
     var onNavigate: (String) -> Void
     var onDownload: ([FileItem]) -> Void
@@ -31,15 +33,43 @@ struct RemoteFileBrowser: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
+            // Header with nav buttons
+            HStack(spacing: 6) {
                 Image(systemName: "globe")
                     .foregroundColor(.green)
                 Text("Remote Files")
                     .font(.headline)
+
                 Spacer()
 
                 if isConnected {
+                    // Navigation buttons
+                    HStack(spacing: 2) {
+                        Button(action: goBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(pathHistory.isEmpty)
+                        .help("Back")
+
+                        Button(action: goForward) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(pathForwardHistory.isEmpty)
+                        .help("Forward")
+
+                        Button(action: goUp) {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(currentPath == "/")
+                        .help("Parent Directory")
+                    }
+
                     Button(action: { showNewFolderSheet = true }) {
                         Image(systemName: "folder.badge.plus")
                     }
@@ -56,7 +86,7 @@ struct RemoteFileBrowser: View {
             } else {
                 // Path bar with autocomplete
                 PathBarView(path: currentPath, isRemote: true, onNavigate: { path in
-                    onNavigate(path)
+                    navigateTo(path)
                 }, onListRemoteDirectory: onListRemoteDirectory)
 
                 Divider()
@@ -122,8 +152,7 @@ struct RemoteFileBrowser: View {
                         item: FileItem(name: "..", path: currentPath, isDirectory: true)
                     )
                     .onTapGesture(count: 2) {
-                        let parent = FileItem.parentPath(of: currentPath)
-                        onNavigate(parent)
+                        goUp()
                     }
                     Divider().padding(.leading, 36)
                 }
@@ -373,11 +402,37 @@ struct RemoteFileBrowser: View {
 
     private func handleDoubleTap(_ item: FileItem) {
         if item.isDirectory {
-            onNavigate(item.fullPath)
+            navigateTo(item.fullPath)
             selectedItems.removeAll()
         } else {
             onDownload([item])
         }
+    }
+
+    // MARK: - Navigation
+
+    private func navigateTo(_ path: String) {
+        pathHistory.append(currentPath)
+        pathForwardHistory.removeAll()
+        onNavigate(path)
+    }
+
+    private func goBack() {
+        guard let prev = pathHistory.popLast() else { return }
+        pathForwardHistory.append(currentPath)
+        onNavigate(prev)
+    }
+
+    private func goForward() {
+        guard let next = pathForwardHistory.popLast() else { return }
+        pathHistory.append(currentPath)
+        onNavigate(next)
+    }
+
+    private func goUp() {
+        guard currentPath != "/" else { return }
+        let parent = (currentPath as NSString).deletingLastPathComponent
+        navigateTo(parent)
     }
 
     private func handleUploadDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {

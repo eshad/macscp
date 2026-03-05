@@ -65,6 +65,17 @@ actor SFTPService {
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Escape remote path for scp (remote shell interprets this)
+    private func scpEscapeRemotePath(_ path: String) -> String {
+        // scp remote paths are interpreted by the remote shell,
+        // so we need to escape spaces and special chars
+        var escaped = path
+        for char in [" ", "'", "\"", "(", ")", "&", ";", "|", "$", "`", "!", "#", "*", "?", "{", "}", "[", "]"] {
+            escaped = escaped.replacingOccurrences(of: char, with: "\\\(char)")
+        }
+        return escaped
+    }
+
     /// Download a file using scp
     func download(remotePath: String, localPath: String) -> Process {
         let process = Process()
@@ -78,7 +89,7 @@ actor SFTPService {
             args.append(contentsOf: ["-i", keyPath])
         }
 
-        args.append("\(connection.sshTarget):\(remotePath)")
+        args.append("\(connection.sshTarget):\(scpEscapeRemotePath(remotePath))")
         args.append(localPath)
 
         process.arguments = args
@@ -99,7 +110,7 @@ actor SFTPService {
         }
 
         args.append(localPath)
-        args.append("\(connection.sshTarget):\(remotePath)")
+        args.append("\(connection.sshTarget):\(scpEscapeRemotePath(remotePath))")
 
         process.arguments = args
         return process

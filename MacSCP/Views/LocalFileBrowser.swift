@@ -9,7 +9,8 @@ struct LocalFileBrowser: View {
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
     @State private var isDropTargeted = false
-    @State private var dropAnimating = false
+    @State private var pathHistory: [String] = []
+    @State private var pathForwardHistory: [String] = []
 
     var onNavigate: (String) -> Void
     var onUpload: ([FileItem]) -> Void
@@ -20,13 +21,48 @@ struct LocalFileBrowser: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
+            // Header with nav buttons
+            HStack(spacing: 6) {
                 Image(systemName: "laptopcomputer")
                     .foregroundColor(.accentColor)
                 Text("Local Files")
                     .font(.headline)
+
                 Spacer()
+
+                // Navigation buttons
+                HStack(spacing: 2) {
+                    Button(action: goBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(pathHistory.isEmpty)
+                    .help("Back")
+
+                    Button(action: goForward) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(pathForwardHistory.isEmpty)
+                    .help("Forward")
+
+                    Button(action: goUp) {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(currentPath == "/")
+                    .help("Parent Directory")
+
+                    Button(action: goHome) {
+                        Image(systemName: "house")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Home Directory")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -34,7 +70,7 @@ struct LocalFileBrowser: View {
 
             // Path bar with autocomplete
             PathBarView(path: currentPath, isRemote: false) { path in
-                onNavigate(path)
+                navigateTo(path)
             }
 
             Divider()
@@ -56,8 +92,7 @@ struct LocalFileBrowser: View {
                                 item: FileItem(name: "..", path: currentPath, isDirectory: true)
                             )
                             .onTapGesture(count: 2) {
-                                let parent = FileItem.parentPath(of: currentPath)
-                                onNavigate(parent)
+                                goUp()
                             }
                             Divider().padding(.leading, 36)
                         }
@@ -209,8 +244,41 @@ struct LocalFileBrowser: View {
 
     private func handleDoubleTap(_ item: FileItem) {
         if item.isDirectory {
-            onNavigate(item.fullPath)
+            navigateTo(item.fullPath)
             selectedItems.removeAll()
+        }
+    }
+
+    // MARK: - Navigation
+
+    private func navigateTo(_ path: String) {
+        pathHistory.append(currentPath)
+        pathForwardHistory.removeAll()
+        onNavigate(path)
+    }
+
+    private func goBack() {
+        guard let prev = pathHistory.popLast() else { return }
+        pathForwardHistory.append(currentPath)
+        onNavigate(prev)
+    }
+
+    private func goForward() {
+        guard let next = pathForwardHistory.popLast() else { return }
+        pathHistory.append(currentPath)
+        onNavigate(next)
+    }
+
+    private func goUp() {
+        guard currentPath != "/" else { return }
+        let parent = FileItem.parentPath(of: currentPath)
+        navigateTo(parent)
+    }
+
+    private func goHome() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if currentPath != home {
+            navigateTo(home)
         }
     }
 
