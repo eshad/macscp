@@ -50,6 +50,15 @@ actor SFTPService {
         return Int64(cleaned) ?? 0
     }
 
+    /// List directory names in a path (for autocomplete suggestions)
+    func listDirectoryNames(at path: String) async throws -> [String] {
+        let command = "ls -1F \(escapePath(path)) 2>/dev/null | grep '/$' | sed 's/\\/$//' | head -20"
+        let output = try await ssh.execute(command, timeout: 10)
+        return output.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && !$0.hasPrefix(".") }
+    }
+
     /// Get remote home directory
     func homeDirectory() async throws -> String {
         let output = try await ssh.execute("echo $HOME")

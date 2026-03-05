@@ -24,6 +24,7 @@
 		A1000015000000000000000F /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015000000000000000F; };
 		A10000160000000000000010 /* FileHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000160000000000000010; };
 		A10000170000000000000011 /* SSHKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000011; };
+		A10000180000000000000012 /* PathBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000012; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +45,7 @@
 		A2000015000000000000000F /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
 		A20000160000000000000010 /* FileHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHelper.swift; sourceTree = "<group>"; };
 		A20000170000000000000011 /* SSHKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeyManager.swift; sourceTree = "<group>"; };
+		A20000180000000000000012 /* PathBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathBarView.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* MacSCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacSCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* MacSCP.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacSCP.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -111,6 +113,7 @@
 				A2000013000000000000000D /* TransferQueueView.swift */,
 				A2000014000000000000000E /* ConnectionManagerView.swift */,
 				A2000015000000000000000F /* ToolbarView.swift */,
+				A20000180000000000000012 /* PathBarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -217,6 +220,7 @@
 				A1000015000000000000000F /* ToolbarView.swift in Sources */,
 				A10000160000000000000010 /* FileHelper.swift in Sources */,
 				A10000170000000000000011 /* SSHKeyManager.swift in Sources */,
+				A10000180000000000000012 /* PathBarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

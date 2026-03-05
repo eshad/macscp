@@ -92,6 +92,10 @@ struct MainView: View {
                 },
                 onCreateFolder: { name in
                     createRemoteFolder(name)
+                },
+                onListRemoteDirectory: { path in
+                    guard let service = sftpService else { return [] }
+                    return try await service.listDirectoryNames(at: path)
                 }
             )
             .frame(minWidth: 300)

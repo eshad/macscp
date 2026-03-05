@@ -19,6 +19,7 @@ struct RemoteFileBrowser: View {
     var onDelete: (FileItem) -> Void
     var onRename: (FileItem, String) -> Void
     var onCreateFolder: (String) -> Void
+    var onListRemoteDirectory: ((String) async throws -> [String])?
 
     enum SortOrder {
         case name, size, date
@@ -49,10 +50,10 @@ struct RemoteFileBrowser: View {
             if !isConnected {
                 notConnectedView
             } else {
-                // Breadcrumb
-                BreadcrumbView(path: currentPath) { path in
+                // Path bar with autocomplete
+                PathBarView(path: currentPath, isRemote: true, onNavigate: { path in
                     onNavigate(path)
-                }
+                }, onListRemoteDirectory: onListRemoteDirectory)
 
                 Divider()
                 FileListHeader()

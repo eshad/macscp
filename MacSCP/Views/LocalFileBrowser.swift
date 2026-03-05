@@ -28,8 +28,8 @@ struct LocalFileBrowser: View {
             .padding(.vertical, 8)
             .background(Color(nsColor: .controlBackgroundColor))
 
-            // Breadcrumb
-            BreadcrumbView(path: currentPath) { path in
+            // Path bar with autocomplete
+            PathBarView(path: currentPath, isRemote: false) { path in
                 onNavigate(path)
             }
 
