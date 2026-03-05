@@ -77,19 +77,17 @@ struct LocalFileBrowser: View {
                             .contextMenu {
                                 localContextMenu(for: item)
                             }
-                            .itemProvider {
-                                // Provide as file URL for cross-pane and Finder compatibility
+                            .onDrag {
                                 let provider = NSItemProvider()
                                 let url = URL(fileURLWithPath: item.fullPath)
+                                provider.suggestedName = item.name
                                 provider.registerFileRepresentation(forTypeIdentifier: UTType.fileURL.identifier, visibility: .all) { completion in
                                     completion(url, true, nil)
                                     return nil
                                 }
-                                // Also register as plain text for internal drag
-                                provider.registerItem(forTypeIdentifier: UTType.utf8PlainText.identifier) { completion, _, _ in
-                                    completion?(item.fullPath as NSString, nil)
-                                }
                                 return provider
+                            } preview: {
+                                DragPreviewView(name: item.name, icon: item.icon)
                             }
                             .onDrop(of: [.fileURL], isTargeted: Binding(
                                 get: { dropTargetItemId == item.id },

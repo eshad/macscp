@@ -11,6 +11,9 @@ class TransferManager: ObservableObject {
     private var connection: ServerConnection?
     private var password: String?
 
+    /// Called when a transfer completes (direction, success)
+    var onTransferCompleted: ((TransferDirection, Bool) -> Void)?
+
     func configure(connection: ServerConnection, password: String?) {
         self.connection = connection
         self.password = password
@@ -102,20 +105,25 @@ class TransferManager: ObservableObject {
                 monitorTask.cancel()
 
                 await MainActor.run {
+                    let success: Bool
                     if process.terminationStatus == 0 {
                         task.markCompleted()
+                        success = true
                     } else {
                         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                         let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
                         task.markFailed(stderr.trimmingCharacters(in: .whitespacesAndNewlines))
+                        success = false
                     }
                     self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
+                    self?.onTransferCompleted?(task.direction, success)
                     self?.processQueue()
                 }
             } catch {
                 await MainActor.run {
                     task.markFailed(error.localizedDescription)
                     self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
+                    self?.onTransferCompleted?(task.direction, false)
                     self?.processQueue()
                 }
             }

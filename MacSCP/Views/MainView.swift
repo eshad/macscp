@@ -41,6 +41,15 @@ struct MainView: View {
         }
         .onAppear {
             loadLocalFiles()
+            // Auto-refresh file lists when transfers complete
+            transferManager.onTransferCompleted = { direction, success in
+                guard success else { return }
+                if direction == .upload {
+                    loadRemoteFiles()
+                } else {
+                    loadLocalFiles()
+                }
+            }
         }
     }
 

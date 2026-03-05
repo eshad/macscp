@@ -198,13 +198,16 @@ struct RemoteFileBrowser: View {
         .contextMenu {
             remoteContextMenu(for: item)
         }
-        .itemProvider {
-            // Provide remote path as text for cross-pane drag
+        .onDrag {
             let provider = NSItemProvider()
+            provider.suggestedName = item.name
+            // Register as plain text with remote path for internal use
             provider.registerItem(forTypeIdentifier: UTType.utf8PlainText.identifier) { completion, _, _ in
                 completion?(item.fullPath as NSString, nil)
             }
             return provider
+        } preview: {
+            DragPreviewView(name: item.name, icon: item.icon)
         }
         .onDrop(of: [.fileURL], isTargeted: Binding(
             get: { dropTargetItemId == item.id },
