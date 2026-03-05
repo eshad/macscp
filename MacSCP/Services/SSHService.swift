@@ -71,12 +71,22 @@ actor SSHService {
 
                 guard guard_.tryResume() else { return }
 
+                // Filter out SSH warning lines (e.g. post-quantum warnings)
+                let filteredStderr = stderr
+                    .components(separatedBy: "\n")
+                    .filter { line in
+                        let trimmed = line.trimmingCharacters(in: .whitespaces)
+                        return !trimmed.hasPrefix("**") && !trimmed.isEmpty
+                    }
+                    .joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: stdout)
                 } else {
-                    let errorMsg = stderr.isEmpty
+                    let errorMsg = filteredStderr.isEmpty
                         ? "SSH command failed with exit code \(process.terminationStatus)"
-                        : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                        : filteredStderr
                     continuation.resume(throwing: SSHError.commandFailed(errorMsg))
                 }
             }

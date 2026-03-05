@@ -6,9 +6,12 @@ struct LocalFileBrowser: View {
     @Binding var isLoading: Bool
     @State private var selectedItems: Set<FileItem> = []
     @State private var sortOrder: SortOrder = .name
+    @State private var dropTargetItemId: UUID?
+    @State private var isDropTargeted = false
 
     var onNavigate: (String) -> Void
     var onUpload: ([FileItem]) -> Void
+    var onDownloadToLocal: (([String]) -> Void)?
 
     enum SortOrder {
         case name, size, date
@@ -61,7 +64,8 @@ struct LocalFileBrowser: View {
                         ForEach(sortedFiles) { item in
                             FileRowView(
                                 item: item,
-                                isSelected: selectedItems.contains(item)
+                                isSelected: selectedItems.contains(item),
+                                isDropTarget: dropTargetItemId == item.id
                             )
                             .onTapGesture {
                                 handleTap(item)
@@ -73,8 +77,15 @@ struct LocalFileBrowser: View {
                                 localContextMenu(for: item)
                             }
                             .draggable(item.fullPath) {
-                                Label(item.name, systemImage: item.icon)
-                                    .padding(4)
+                                DragPreviewView(name: item.name, icon: item.icon)
+                            }
+                            .onDrop(of: [.text], isTargeted: Binding(
+                                get: { dropTargetItemId == item.id },
+                                set: { if $0 { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil } }
+                            )) { providers in
+                                // Drop on a specific folder
+                                guard item.isDirectory else { return false }
+                                return handleLocalDrop(providers, targetPath: item.fullPath)
                             }
 
                             if item != sortedFiles.last {
@@ -84,9 +95,33 @@ struct LocalFileBrowser: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
+                    handleLocalDrop(providers, targetPath: currentPath)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.accentColor, lineWidth: 2)
+                        .opacity(isDropTargeted ? 1 : 0)
+                        .padding(2)
+                )
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private func handleLocalDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
+        guard let onDownloadToLocal = onDownloadToLocal else { return false }
+        var remotePaths: [String] = []
+        for provider in providers {
+            _ = provider.loadObject(ofClass: String.self) { string, _ in
+                if let path = string {
+                    DispatchQueue.main.async {
+                        onDownloadToLocal([path])
+                    }
+                }
+            }
+        }
+        return true
     }
 
     private var sortedFiles: [FileItem] {

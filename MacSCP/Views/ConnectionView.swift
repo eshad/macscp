@@ -333,56 +333,84 @@ struct ConnectionView: View {
     // MARK: - Connection Form
 
     private var connectionForm: some View {
-        Form {
-            Section("Server") {
-                TextField("Connection Name", text: $connection.name)
-                    .textFieldStyle(.roundedBorder)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Server section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Server")
+                        .font(.headline)
 
-                HStack {
-                    TextField("Host", text: $connection.host)
-                        .textFieldStyle(.roundedBorder)
-
-                    TextField("Port", value: $connection.port, format: .number)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 70)
-                }
-
-                TextField("Username", text: $connection.username)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            Section("Authentication") {
-                Picker("Method", selection: $connection.authMethod) {
-                    ForEach(AuthMethod.allCases, id: \.self) { method in
-                        Text(method.rawValue).tag(method)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Connection Name").font(.caption).foregroundColor(.secondary)
+                        TextField("Connection Name", text: $connection.name)
+                            .textFieldStyle(.roundedBorder)
                     }
-                }
-                .pickerStyle(.segmented)
 
-                if connection.authMethod == .sshKey {
-                    HStack {
-                        TextField("SSH Key Path", text: Binding(
-                            get: { connection.sshKeyPath ?? "" },
-                            set: { connection.sshKeyPath = $0.isEmpty ? nil : $0 }
-                        ))
-                        .textFieldStyle(.roundedBorder)
+                    HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Host").font(.caption).foregroundColor(.secondary)
+                            TextField("Host", text: $connection.host)
+                                .textFieldStyle(.roundedBorder)
+                        }
 
-                        Button("Browse") {
-                            browseSSHKey()
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Port").font(.caption).foregroundColor(.secondary)
+                            TextField("Port", value: $connection.port, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 70)
                         }
                     }
 
-                    Text("Leave empty to use ssh-agent default keys")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(.roundedBorder)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Username").font(.caption).foregroundColor(.secondary)
+                        TextField("Username", text: $connection.username)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+
+                Divider()
+
+                // Authentication section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Authentication")
+                        .font(.headline)
+
+                    Picker("Method", selection: $connection.authMethod) {
+                        ForEach(AuthMethod.allCases, id: \.self) { method in
+                            Text(method.rawValue).tag(method)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if connection.authMethod == .sshKey {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("SSH Key Path").font(.caption).foregroundColor(.secondary)
+                            HStack {
+                                TextField("SSH Key Path", text: Binding(
+                                    get: { connection.sshKeyPath ?? "" },
+                                    set: { connection.sshKeyPath = $0.isEmpty ? nil : $0 }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+
+                                Button("Browse") {
+                                    browseSSHKey()
+                                }
+                            }
+                            Text("Leave empty to use ssh-agent default keys")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Password").font(.caption).foregroundColor(.secondary)
+                            SecureField("Password", text: $password)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                    }
                 }
             }
+            .padding()
         }
-        .formStyle(.grouped)
-        .padding()
     }
 
     // MARK: - Actions

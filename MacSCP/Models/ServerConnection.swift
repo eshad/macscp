@@ -41,7 +41,11 @@ struct ServerConnection: Identifiable, Codable, Hashable {
     }
 
     var sshTarget: String {
-        "\(username)@\(host)"
+        // If host already contains user@, use it directly
+        if host.contains("@") {
+            return host
+        }
+        return "\(username)@\(host)"
     }
 
     var sshPortArgs: [String] {

@@ -3,6 +3,7 @@ import SwiftUI
 struct FileRowView: View {
     let item: FileItem
     var isSelected: Bool = false
+    var isDropTarget: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -39,9 +40,23 @@ struct FileRowView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .background(rowBackground)
         .cornerRadius(4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .opacity(isDropTarget ? 1 : 0)
+        )
         .contentShape(Rectangle())
+    }
+
+    private var rowBackground: Color {
+        if isDropTarget {
+            return Color.accentColor.opacity(0.15)
+        } else if isSelected {
+            return Color.accentColor.opacity(0.2)
+        }
+        return Color.clear
     }
 
     private var iconColor: Color {
@@ -56,6 +71,42 @@ struct FileRowView: View {
         case "gray": return .gray
         default: return .secondary
         }
+    }
+}
+
+// MARK: - Drag Preview
+
+struct DragPreviewView: View {
+    let name: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(.accentColor)
+            Text(name)
+                .font(.system(size: 12))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(6)
+        .overlay(
+            // "+" badge
+            ZStack {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 16, height: 16)
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .offset(x: 8, y: -8),
+            alignment: .topTrailing
+        )
+        .shadow(radius: 3)
     }
 }
 

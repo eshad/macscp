@@ -13,6 +13,8 @@ struct RemoteFileBrowser: View {
     @State private var showDeleteConfirm = false
     @State private var itemToDelete: FileItem?
     @State private var sortOrder: SortOrder = .name
+    @State private var dropTargetItemId: UUID?
+    @State private var isDropTargeted = false
 
     var onNavigate: (String) -> Void
     var onDownload: ([FileItem]) -> Void
@@ -20,6 +22,7 @@ struct RemoteFileBrowser: View {
     var onRename: (FileItem, String) -> Void
     var onCreateFolder: (String) -> Void
     var onListRemoteDirectory: ((String) async throws -> [String])?
+    var onUploadFiles: (([URL], String) -> Void)?
 
     enum SortOrder {
         case name, size, date
@@ -90,7 +93,7 @@ struct RemoteFileBrowser: View {
             }
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-            handleDrop(providers)
+            handleUploadDrop(providers, targetPath: currentPath)
         }
     }
 
@@ -133,7 +136,8 @@ struct RemoteFileBrowser: View {
                     } else {
                         FileRowView(
                             item: item,
-                            isSelected: selectedItems.contains(item)
+                            isSelected: selectedItems.contains(item),
+                            isDropTarget: dropTargetItemId == item.id
                         )
                         .onTapGesture {
                             handleTap(item)
@@ -144,6 +148,16 @@ struct RemoteFileBrowser: View {
                         .contextMenu {
                             remoteContextMenu(for: item)
                         }
+                        .draggable(item.fullPath) {
+                            DragPreviewView(name: item.name, icon: item.icon)
+                        }
+                        .onDrop(of: [.fileURL], isTargeted: Binding(
+                            get: { dropTargetItemId == item.id },
+                            set: { if $0 { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil } }
+                        )) { providers in
+                            guard item.isDirectory else { return false }
+                            return handleUploadDrop(providers, targetPath: item.fullPath)
+                        }
                     }
 
                     if item != sortedFiles.last {
@@ -153,6 +167,15 @@ struct RemoteFileBrowser: View {
             }
             .padding(.vertical, 4)
         }
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+            handleUploadDrop(providers, targetPath: currentPath)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.accentColor, lineWidth: 2)
+                .opacity(isDropTargeted ? 1 : 0)
+                .padding(2)
+        )
     }
 
     private var sortedFiles: [FileItem] {
@@ -313,21 +336,14 @@ struct RemoteFileBrowser: View {
         }
     }
 
-    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+    private func handleUploadDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
+        guard let onUploadFiles = onUploadFiles else { return false }
         for provider in providers {
             provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
                 guard let data = data as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-
-                let item = FileItem(
-                    name: url.lastPathComponent,
-                    path: url.deletingLastPathComponent().path,
-                    size: (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0,
-                    isDirectory: url.hasDirectoryPath
-                )
-
                 DispatchQueue.main.async {
-                    _ = currentPath // placeholder for future upload integration via TransferManager
+                    onUploadFiles([url], targetPath)
                 }
             }
         }

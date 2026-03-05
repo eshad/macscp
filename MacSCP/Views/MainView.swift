@@ -96,6 +96,17 @@ struct MainView: View {
                 onListRemoteDirectory: { path in
                     guard let service = sftpService else { return [] }
                     return try await service.listDirectoryNames(at: path)
+                },
+                onUploadFiles: { urls, targetPath in
+                    for url in urls {
+                        let fileName = url.lastPathComponent
+                        let remoteDest = targetPath.hasSuffix("/") ? targetPath + fileName : targetPath + "/" + fileName
+                        self.transferManager.uploadFile(
+                            localPath: url.path,
+                            remotePath: remoteDest,
+                            fileName: fileName
+                        )
+                    }
                 }
             )
             .frame(minWidth: 300)
