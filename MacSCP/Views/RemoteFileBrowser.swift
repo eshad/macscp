@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct RemoteFileBrowser: View {
     @Binding var currentPath: String
@@ -92,9 +93,6 @@ struct RemoteFileBrowser: View {
                 Text("Are you sure you want to delete \"\(item.name)\"?\(item.isDirectory ? " This will delete all contents." : "")")
             }
         }
-        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-            handleUploadDrop(providers, targetPath: currentPath)
-        }
     }
 
     // MARK: - Subviews
@@ -134,30 +132,7 @@ struct RemoteFileBrowser: View {
                     if renamingItem?.id == item.id {
                         inlineRenameRow(item: item)
                     } else {
-                        FileRowView(
-                            item: item,
-                            isSelected: selectedItems.contains(item),
-                            isDropTarget: dropTargetItemId == item.id
-                        )
-                        .onTapGesture {
-                            handleTap(item)
-                        }
-                        .onTapGesture(count: 2) {
-                            handleDoubleTap(item)
-                        }
-                        .contextMenu {
-                            remoteContextMenu(for: item)
-                        }
-                        .draggable(item.fullPath) {
-                            DragPreviewView(name: item.name, icon: item.icon)
-                        }
-                        .onDrop(of: [.fileURL], isTargeted: Binding(
-                            get: { dropTargetItemId == item.id },
-                            set: { if $0 { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil } }
-                        )) { providers in
-                            guard item.isDirectory else { return false }
-                            return handleUploadDrop(providers, targetPath: item.fullPath)
-                        }
+                        fileRow(item)
                     }
 
                     if item != sortedFiles.last {
@@ -167,15 +142,81 @@ struct RemoteFileBrowser: View {
             }
             .padding(.vertical, 4)
         }
-        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+        .onDrop(of: [.fileURL], isTargeted: Binding(
+            get: { isDropTargeted },
+            set: { val in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isDropTargeted = val
+                }
+            }
+        )) { providers in
             handleUploadDrop(providers, targetPath: currentPath)
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.accentColor, lineWidth: 2)
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.green, lineWidth: 3)
                 .opacity(isDropTargeted ? 1 : 0)
-                .padding(2)
+                .padding(3)
+                .animation(.easeInOut(duration: 0.2), value: isDropTargeted)
         )
+        .overlay(
+            // Drop zone indicator
+            VStack {
+                Spacer()
+                if isDropTargeted {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.doc.fill")
+                            .foregroundColor(.green)
+                        Text("Drop to upload here")
+                            .font(.caption.bold())
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.15))
+                    .cornerRadius(6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, 8)
+                }
+            }
+            .animation(.spring(response: 0.3), value: isDropTargeted)
+        )
+    }
+
+    private func fileRow(_ item: FileItem) -> some View {
+        FileRowView(
+            item: item,
+            isSelected: selectedItems.contains(item),
+            isDropTarget: dropTargetItemId == item.id
+        )
+        .onTapGesture {
+            handleTap(item)
+        }
+        .onTapGesture(count: 2) {
+            handleDoubleTap(item)
+        }
+        .contextMenu {
+            remoteContextMenu(for: item)
+        }
+        .itemProvider {
+            // Provide remote path as text for cross-pane drag
+            let provider = NSItemProvider()
+            provider.registerItem(forTypeIdentifier: UTType.utf8PlainText.identifier) { completion, _, _ in
+                completion?(item.fullPath as NSString, nil)
+            }
+            return provider
+        }
+        .onDrop(of: [.fileURL], isTargeted: Binding(
+            get: { dropTargetItemId == item.id },
+            set: { val in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if val { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil }
+                }
+            }
+        )) { providers in
+            guard item.isDirectory else { return false }
+            return handleUploadDrop(providers, targetPath: item.fullPath)
+        }
     }
 
     private var sortedFiles: [FileItem] {
@@ -338,15 +379,24 @@ struct RemoteFileBrowser: View {
 
     private func handleUploadDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
         guard let onUploadFiles = onUploadFiles else { return false }
+        var handled = false
         for provider in providers {
-            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
-                guard let data = data as? Data,
-                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                DispatchQueue.main.async {
-                    onUploadFiles([url], targetPath)
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
+                    var url: URL?
+                    if let urlData = data as? Data {
+                        url = URL(dataRepresentation: urlData, relativeTo: nil)
+                    } else if let rawURL = data as? URL {
+                        url = rawURL
+                    }
+                    guard let sourceURL = url else { return }
+                    DispatchQueue.main.async {
+                        onUploadFiles([sourceURL], targetPath)
+                    }
                 }
+                handled = true
             }
         }
-        return true
+        return handled
     }
 }

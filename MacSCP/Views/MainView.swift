@@ -13,6 +13,8 @@ struct MainView: View {
     @State private var errorMessage: String?
     @State private var sftpService: SFTPService?
     @State private var transferQueueHeight: CGFloat = 160
+    @State private var selectedLocalItems: Set<UUID> = []
+    @State private var selectedRemoteItems: Set<UUID> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,6 +74,9 @@ struct MainView: View {
             )
             .frame(minWidth: 300)
 
+            // Transfer buttons between panes
+            transferButtons
+
             RemoteFileBrowser(
                 currentPath: $remotePath,
                 files: $remoteFiles,
@@ -111,6 +116,59 @@ struct MainView: View {
             )
             .frame(minWidth: 300)
         }
+    }
+
+    // MARK: - Transfer Buttons
+
+    private var transferButtons: some View {
+        VStack(spacing: 12) {
+            Spacer()
+
+            // Upload button (local -> remote)
+            Button(action: {
+                let selected = localFiles.filter { selectedLocalItems.contains($0.id) }
+                if !selected.isEmpty {
+                    uploadFiles(selected)
+                } else {
+                    // Upload all selected in LocalFileBrowser (fallback)
+                    // User should select files first
+                }
+            }) {
+                VStack(spacing: 4) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 24))
+                    Text("Upload")
+                        .font(.caption2)
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(connectionManager.isConnected ? .blue : .secondary)
+            .disabled(!connectionManager.isConnected)
+            .help("Upload selected files to remote")
+
+            // Download button (remote -> local)
+            Button(action: {
+                let selected = remoteFiles.filter { selectedRemoteItems.contains($0.id) }
+                if !selected.isEmpty {
+                    downloadFiles(selected)
+                }
+            }) {
+                VStack(spacing: 4) {
+                    Image(systemName: "arrow.left.circle.fill")
+                        .font(.system(size: 24))
+                    Text("Download")
+                        .font(.caption2)
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(connectionManager.isConnected ? .green : .secondary)
+            .disabled(!connectionManager.isConnected)
+            .help("Download selected files from remote")
+
+            Spacer()
+        }
+        .frame(width: 60)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.3))
     }
 
     // MARK: - Actions

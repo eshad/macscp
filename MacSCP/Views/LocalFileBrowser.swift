@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LocalFileBrowser: View {
     @Binding var currentPath: String
@@ -8,10 +9,10 @@ struct LocalFileBrowser: View {
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
     @State private var isDropTargeted = false
+    @State private var dropAnimating = false
 
     var onNavigate: (String) -> Void
     var onUpload: ([FileItem]) -> Void
-    var onDownloadToLocal: (([String]) -> Void)?
 
     enum SortOrder {
         case name, size, date
@@ -76,16 +77,30 @@ struct LocalFileBrowser: View {
                             .contextMenu {
                                 localContextMenu(for: item)
                             }
-                            .draggable(item.fullPath) {
-                                DragPreviewView(name: item.name, icon: item.icon)
+                            .itemProvider {
+                                // Provide as file URL for cross-pane and Finder compatibility
+                                let provider = NSItemProvider()
+                                let url = URL(fileURLWithPath: item.fullPath)
+                                provider.registerFileRepresentation(forTypeIdentifier: UTType.fileURL.identifier, visibility: .all) { completion in
+                                    completion(url, true, nil)
+                                    return nil
+                                }
+                                // Also register as plain text for internal drag
+                                provider.registerItem(forTypeIdentifier: UTType.utf8PlainText.identifier) { completion, _, _ in
+                                    completion?(item.fullPath as NSString, nil)
+                                }
+                                return provider
                             }
-                            .onDrop(of: [.text], isTargeted: Binding(
+                            .onDrop(of: [.fileURL], isTargeted: Binding(
                                 get: { dropTargetItemId == item.id },
-                                set: { if $0 { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil } }
+                                set: { val in
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if val { dropTargetItemId = item.id } else if dropTargetItemId == item.id { dropTargetItemId = nil }
+                                    }
+                                }
                             )) { providers in
-                                // Drop on a specific folder
                                 guard item.isDirectory else { return false }
-                                return handleLocalDrop(providers, targetPath: item.fullPath)
+                                return handleFileDrop(providers, targetPath: item.fullPath)
                             }
 
                             if item != sortedFiles.last {
@@ -95,33 +110,77 @@ struct LocalFileBrowser: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
-                    handleLocalDrop(providers, targetPath: currentPath)
+                .onDrop(of: [.fileURL], isTargeted: Binding(
+                    get: { isDropTargeted },
+                    set: { val in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isDropTargeted = val
+                        }
+                    }
+                )) { providers in
+                    handleFileDrop(providers, targetPath: currentPath)
                 }
                 .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.accentColor, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.accentColor, lineWidth: 3)
                         .opacity(isDropTargeted ? 1 : 0)
-                        .padding(2)
+                        .padding(3)
+                        .animation(.easeInOut(duration: 0.2), value: isDropTargeted)
+                )
+                .overlay(
+                    // Drop zone indicator
+                    VStack {
+                        Spacer()
+                        if isDropTargeted {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down.doc.fill")
+                                    .foregroundColor(.accentColor)
+                                Text("Drop to copy here")
+                                    .font(.caption.bold())
+                                    .foregroundColor(.accentColor)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.15))
+                            .cornerRadius(6)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .padding(.bottom, 8)
+                        }
+                    }
+                    .animation(.spring(response: 0.3), value: isDropTargeted)
                 )
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
     }
 
-    private func handleLocalDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
-        guard let onDownloadToLocal = onDownloadToLocal else { return false }
-        var remotePaths: [String] = []
+    // Handle drops from Finder, remote pane, or any file URL source
+    private func handleFileDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
+        var handled = false
         for provider in providers {
-            _ = provider.loadObject(ofClass: String.self) { string, _ in
-                if let path = string {
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
+                    var url: URL?
+                    if let urlData = data as? Data {
+                        url = URL(dataRepresentation: urlData, relativeTo: nil)
+                    } else if let rawURL = data as? URL {
+                        url = rawURL
+                    }
+                    guard let sourceURL = url else { return }
+
                     DispatchQueue.main.async {
-                        onDownloadToLocal([path])
+                        let destPath = (targetPath as NSString).appendingPathComponent(sourceURL.lastPathComponent)
+                        // Copy file from source to local target
+                        if sourceURL.path != destPath {
+                            try? FileManager.default.copyItem(atPath: sourceURL.path, toPath: destPath)
+                            onNavigate(currentPath) // Refresh
+                        }
                     }
                 }
+                handled = true
             }
         }
-        return true
+        return handled
     }
 
     private var sortedFiles: [FileItem] {
