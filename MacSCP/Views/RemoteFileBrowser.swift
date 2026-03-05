@@ -444,10 +444,15 @@ struct RemoteFileBrowser: View {
                     var url: URL?
                     if let urlData = data as? Data {
                         url = URL(dataRepresentation: urlData, relativeTo: nil)
+                        // Fallback: try interpreting as UTF-8 string
+                        if url == nil || url?.path.isEmpty == true,
+                           let str = String(data: urlData, encoding: .utf8) {
+                            url = URL(string: str) ?? URL(fileURLWithPath: str)
+                        }
                     } else if let rawURL = data as? URL {
                         url = rawURL
                     }
-                    guard let sourceURL = url else { return }
+                    guard let sourceURL = url, !sourceURL.path.isEmpty else { return }
                     DispatchQueue.main.async {
                         onUploadFiles([sourceURL], targetPath)
                     }

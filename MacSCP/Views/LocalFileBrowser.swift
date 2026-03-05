@@ -113,11 +113,12 @@ struct LocalFileBrowser: View {
                                 localContextMenu(for: item)
                             }
                             .onDrag {
-                                let provider = NSItemProvider()
                                 let url = URL(fileURLWithPath: item.fullPath)
+                                let provider = NSItemProvider()
                                 provider.suggestedName = item.name
-                                provider.registerFileRepresentation(forTypeIdentifier: UTType.fileURL.identifier, visibility: .all) { completion in
-                                    completion(url, true, nil)
+                                // Register URL data (not file contents) so drop handler gets the path
+                                provider.registerDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier, visibility: .all) { completion in
+                                    completion(url.dataRepresentation, nil)
                                     return nil
                                 }
                                 return provider
