@@ -66,7 +66,7 @@ class TransferManager: ObservableObject {
     }
 
     private func processQueue() {
-        guard let sftpService = sftpService else { return }
+        guard sftpService != nil else { return }
 
         let queued = tasks.filter { $0.status == .queued }
         let available = maxConcurrent - activeTransfers
@@ -74,11 +74,11 @@ class TransferManager: ObservableObject {
         for task in queued.prefix(available) {
             activeTransfers += 1
             task.markStarted()
-            startTransfer(task: task, service: sftpService)
+            startTransfer(task: task)
         }
     }
 
-    private func startTransfer(task: TransferTask, service: SFTPService) {
+    private func startTransfer(task: TransferTask) {
         guard let connection = connection else {
             task.markFailed("No connection configured")
             activeTransfers = max(0, activeTransfers - 1)
@@ -92,68 +92,88 @@ class TransferManager: ObservableObject {
             return
         }
 
-        // Build process directly here to avoid actor boundary issues
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
-        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+        // Capture all values as simple types for the background thread
+        let localPath = task.localPath
+        let remotePath = task.remotePath
+        let direction = task.direction
+        let sshTarget = connection.sshTarget
+        let scpPortArgs = connection.scpPortArgs
+        let sshKeyPath = connection.sshKeyPath
+        let escapedRemotePath = scpEscapeRemotePath(remotePath)
+        let tmpDir = NSTemporaryDirectory()
 
-        var args = ["-r"]
-        args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
-        args.append(contentsOf: connection.scpPortArgs)
+        // Everything happens on the background queue - no crossing threads
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
+            process.currentDirectoryURL = URL(fileURLWithPath: tmpDir)
 
-        if let keyPath = connection.sshKeyPath, !keyPath.isEmpty {
-            args.append(contentsOf: ["-i", keyPath])
-        }
+            var args = ["-r"]
+            args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
+            args.append(contentsOf: scpPortArgs)
 
-        if task.direction == .upload {
-            args.append(task.localPath)
-            args.append("\(connection.sshTarget):\(scpEscapeRemotePath(task.remotePath))")
-        } else {
-            args.append("\(connection.sshTarget):\(scpEscapeRemotePath(task.remotePath))")
-            args.append(task.localPath)
-        }
+            if let keyPath = sshKeyPath, !keyPath.isEmpty {
+                args.append(contentsOf: ["-i", keyPath])
+            }
 
-        process.arguments = args
-        task.process = process
+            if direction == .upload {
+                args.append(localPath)
+                args.append("\(sshTarget):\(escapedRemotePath)")
+            } else {
+                args.append("\(sshTarget):\(escapedRemotePath)")
+                args.append(localPath)
+            }
 
-        Task.detached { [weak self] in
+            process.arguments = args
+
+            let stderrPipe = Pipe()
+            process.standardError = stderrPipe
+            process.standardOutput = FileHandle.nullDevice
+
+            DispatchQueue.main.async { task.process = process }
+
             do {
-                let stderrPipe = Pipe()
-                process.standardError = stderrPipe
-                process.standardOutput = FileHandle.nullDevice
-
                 try process.run()
-
-                // Monitor progress in background
-                let monitorTask = Task.detached { [weak self] in
-                    await self?.monitorProgress(task: task)
-                }
-
-                process.waitUntilExit()
-                monitorTask.cancel()
-
-                await MainActor.run {
-                    let success: Bool
-                    if process.terminationStatus == 0 {
-                        task.markCompleted()
-                        success = true
-                    } else {
-                        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                        let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
-                        task.markFailed(stderr.trimmingCharacters(in: .whitespacesAndNewlines))
-                        success = false
-                    }
-                    self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
-                    self?.onTransferCompleted?(task.direction, success)
-                    self?.processQueue()
-                }
             } catch {
-                await MainActor.run {
+                DispatchQueue.main.async {
                     task.markFailed(error.localizedDescription)
                     self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
-                    self?.onTransferCompleted?(task.direction, false)
+                    self?.onTransferCompleted?(direction, false)
                     self?.processQueue()
                 }
+                return
+            }
+
+            // Monitor progress for downloads
+            var progressTimer: Timer?
+            if direction == .download {
+                let monitorPath = localPath
+                DispatchQueue.main.async {
+                    progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                        let fileSize: Int64 = (try? FileManager.default.attributesOfItem(atPath: monitorPath)[.size] as? Int64) ?? 0
+                        task.updateProgress(bytes: fileSize)
+                    }
+                }
+            }
+
+            process.waitUntilExit()
+
+            DispatchQueue.main.async {
+                progressTimer?.invalidate()
+
+                let success: Bool
+                if process.terminationStatus == 0 {
+                    task.markCompleted()
+                    success = true
+                } else {
+                    let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    let stderr = String(data: stderrData, encoding: .utf8) ?? "Unknown error"
+                    task.markFailed(stderr.trimmingCharacters(in: .whitespacesAndNewlines))
+                    success = false
+                }
+                self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
+                self?.onTransferCompleted?(direction, success)
+                self?.processQueue()
             }
         }
     }
@@ -164,26 +184,5 @@ class TransferManager: ObservableObject {
             escaped = escaped.replacingOccurrences(of: char, with: "\\\(char)")
         }
         return escaped
-    }
-
-    private func monitorProgress(task: TransferTask) async {
-        while !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
-
-            let path: String
-            if task.direction == .download {
-                path = task.localPath
-            } else {
-                // For uploads, we can't easily track remote progress
-                // Just show as indeterminate
-                continue
-            }
-
-            let fileSize: Int64 = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int64) ?? 0
-
-            await MainActor.run {
-                task.updateProgress(bytes: fileSize)
-            }
-        }
     }
 }
