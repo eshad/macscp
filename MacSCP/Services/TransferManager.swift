@@ -79,17 +79,45 @@ class TransferManager: ObservableObject {
     }
 
     private func startTransfer(task: TransferTask, service: SFTPService) {
+        guard let connection = connection else {
+            task.markFailed("No connection configured")
+            activeTransfers = max(0, activeTransfers - 1)
+            return
+        }
+
+        // Validate paths
+        guard !task.localPath.isEmpty, !task.remotePath.isEmpty else {
+            task.markFailed("Invalid file path")
+            activeTransfers = max(0, activeTransfers - 1)
+            return
+        }
+
+        // Build process directly here to avoid actor boundary issues
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+
+        var args = ["-r"]
+        args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
+        args.append(contentsOf: connection.scpPortArgs)
+
+        if let keyPath = connection.sshKeyPath, !keyPath.isEmpty {
+            args.append(contentsOf: ["-i", keyPath])
+        }
+
+        if task.direction == .upload {
+            args.append(task.localPath)
+            args.append("\(connection.sshTarget):\(scpEscapeRemotePath(task.remotePath))")
+        } else {
+            args.append("\(connection.sshTarget):\(scpEscapeRemotePath(task.remotePath))")
+            args.append(task.localPath)
+        }
+
+        process.arguments = args
+        task.process = process
+
         Task.detached { [weak self] in
             do {
-                let process: Process
-                if task.direction == .upload {
-                    process = await service.upload(localPath: task.localPath, remotePath: task.remotePath)
-                } else {
-                    process = await service.download(remotePath: task.remotePath, localPath: task.localPath)
-                }
-
-                await MainActor.run { task.process = process }
-
                 let stderrPipe = Pipe()
                 process.standardError = stderrPipe
                 process.standardOutput = FileHandle.nullDevice
@@ -128,6 +156,14 @@ class TransferManager: ObservableObject {
                 }
             }
         }
+    }
+
+    private func scpEscapeRemotePath(_ path: String) -> String {
+        var escaped = path
+        for char in [" ", "'", "\"", "(", ")", "&", ";", "|", "$", "`", "!", "#", "*", "?", "{", "}", "[", "]"] {
+            escaped = escaped.replacingOccurrences(of: char, with: "\\\(char)")
+        }
+        return escaped
     }
 
     private func monitorProgress(task: TransferTask) async {
