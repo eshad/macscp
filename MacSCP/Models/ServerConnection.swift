@@ -12,7 +12,6 @@ struct ServerConnection: Identifiable, Codable, Hashable {
     var port: Int
     var username: String
     var authMethod: AuthMethod
-    var sshKeyPath: String?
     var lastConnected: Date?
 
     init(
@@ -22,7 +21,6 @@ struct ServerConnection: Identifiable, Codable, Hashable {
         port: Int = 22,
         username: String = "",
         authMethod: AuthMethod = .sshKey,
-        sshKeyPath: String? = nil,
         lastConnected: Date? = nil
     ) {
         self.id = id
@@ -31,7 +29,6 @@ struct ServerConnection: Identifiable, Codable, Hashable {
         self.port = port
         self.username = username
         self.authMethod = authMethod
-        self.sshKeyPath = sshKeyPath
         self.lastConnected = lastConnected
     }
 
@@ -59,8 +56,6 @@ struct ServerConnection: Identifiable, Codable, Hashable {
 
 class ConnectionManager: ObservableObject {
     @Published var savedConnections: [ServerConnection] = []
-    @Published var activeConnection: ServerConnection?
-    @Published var isConnected = false
 
     private let storageKey = "SavedConnections"
 
@@ -69,10 +64,12 @@ class ConnectionManager: ObservableObject {
     }
 
     func saveConnection(_ connection: ServerConnection) {
-        if let index = savedConnections.firstIndex(where: { $0.id == connection.id }) {
-            savedConnections[index] = connection
+        var conn = connection
+        conn.lastConnected = Date()
+        if let index = savedConnections.firstIndex(where: { $0.id == conn.id }) {
+            savedConnections[index] = conn
         } else {
-            savedConnections.append(connection)
+            savedConnections.append(conn)
         }
         persistConnections()
     }
@@ -80,19 +77,6 @@ class ConnectionManager: ObservableObject {
     func deleteConnection(_ connection: ServerConnection) {
         savedConnections.removeAll { $0.id == connection.id }
         persistConnections()
-    }
-
-    func setActive(_ connection: ServerConnection) {
-        var conn = connection
-        conn.lastConnected = Date()
-        activeConnection = conn
-        isConnected = true
-        saveConnection(conn)
-    }
-
-    func disconnect() {
-        activeConnection = nil
-        isConnected = false
     }
 
     private func persistConnections() {

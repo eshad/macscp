@@ -20,11 +20,12 @@
 		A1000011000000000000000B /* RemoteFileBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011000000000000000B; };
 		A1000012000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012000000000000000C; };
 		A1000013000000000000000D /* TransferQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013000000000000000D; };
-		A1000014000000000000000E /* ConnectionManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014000000000000000E; };
 		A1000015000000000000000F /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015000000000000000F; };
+		A10000190000000000000013 /* RemoteTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000190000000000000013; };
 		A10000160000000000000010 /* FileHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000160000000000000010; };
 		A10000170000000000000011 /* SSHKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000011; };
 		A10000180000000000000012 /* PathBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000012; };
+		A1000020000000000000001A /* RemoteTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020000000000000001A; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,11 +42,12 @@
 		A2000011000000000000000B /* RemoteFileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteFileBrowser.swift; sourceTree = "<group>"; };
 		A2000012000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
 		A2000013000000000000000D /* TransferQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferQueueView.swift; sourceTree = "<group>"; };
-		A2000014000000000000000E /* ConnectionManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionManagerView.swift; sourceTree = "<group>"; };
 		A2000015000000000000000F /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
+		A20000190000000000000013 /* RemoteTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTab.swift; sourceTree = "<group>"; };
 		A20000160000000000000010 /* FileHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHelper.swift; sourceTree = "<group>"; };
 		A20000170000000000000011 /* SSHKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeyManager.swift; sourceTree = "<group>"; };
 		A20000180000000000000012 /* PathBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathBarView.swift; sourceTree = "<group>"; };
+		A2000020000000000000001A /* RemoteTextEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTextEditorView.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* MacSCP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacSCP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30000000000000000000002 /* MacSCP.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacSCP.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -88,6 +90,7 @@
 				A20000020000000000000002 /* ServerConnection.swift */,
 				A20000030000000000000003 /* FileItem.swift */,
 				A20000040000000000000004 /* TransferTask.swift */,
+				A20000190000000000000013 /* RemoteTab.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -111,9 +114,9 @@
 				A2000011000000000000000B /* RemoteFileBrowser.swift */,
 				A2000012000000000000000C /* FileRowView.swift */,
 				A2000013000000000000000D /* TransferQueueView.swift */,
-				A2000014000000000000000E /* ConnectionManagerView.swift */,
 				A2000015000000000000000F /* ToolbarView.swift */,
 				A20000180000000000000012 /* PathBarView.swift */,
+				A2000020000000000000001A /* RemoteTextEditorView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -216,11 +219,12 @@
 				A1000011000000000000000B /* RemoteFileBrowser.swift in Sources */,
 				A1000012000000000000000C /* FileRowView.swift in Sources */,
 				A1000013000000000000000D /* TransferQueueView.swift in Sources */,
-				A1000014000000000000000E /* ConnectionManagerView.swift in Sources */,
 				A1000015000000000000000F /* ToolbarView.swift in Sources */,
+				A10000190000000000000013 /* RemoteTab.swift in Sources */,
 				A10000160000000000000010 /* FileHelper.swift in Sources */,
 				A10000170000000000000011 /* SSHKeyManager.swift in Sources */,
 				A10000180000000000000012 /* PathBarView.swift in Sources */,
+				A1000020000000000000001A /* RemoteTextEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

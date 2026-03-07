@@ -95,6 +95,24 @@ struct FileItem: Identifiable, Hashable {
         return formatter.string(from: date)
     }
 
+    var isEditableText: Bool {
+        if isDirectory { return false }
+        let ext = (name as NSString).pathExtension.lowercased()
+        let textExtensions: Set<String> = [
+            "txt", "md", "log", "csv", "json", "xml", "yaml", "yml", "toml", "plist",
+            "swift", "py", "js", "ts", "rb", "go", "rs", "c", "cpp", "h", "java",
+            "sh", "bash", "zsh", "conf", "cfg", "ini", "env",
+            "html", "css", "scss", "less", "php", "pl", "lua", "r",
+            "sql", "makefile", "dockerfile", "gitignore",
+            "kt", "scala", "ex", "exs", "erl", "hs", "ml",
+            "vim", "fish", "ps1", "bat", "cmd"
+        ]
+        if textExtensions.contains(ext) { return true }
+        // Also match dotfiles with no extension (e.g. .bashrc, .zshrc)
+        if ext.isEmpty && name.hasPrefix(".") && name.count > 1 { return true }
+        return false
+    }
+
     var fullPath: String {
         if path.hasSuffix("/") {
             return path + name

@@ -28,10 +28,6 @@ actor SSHService {
         args.append(contentsOf: ["-o", "BatchMode=\(password == nil ? "yes" : "no")"])
         args.append(contentsOf: connection.sshPortArgs)
 
-        if let keyPath = connection.sshKeyPath, !keyPath.isEmpty {
-            args.append(contentsOf: ["-i", keyPath])
-        }
-
         return args
     }
 

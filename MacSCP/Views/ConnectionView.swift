@@ -383,20 +383,11 @@ struct ConnectionView: View {
                     .pickerStyle(.segmented)
 
                     if connection.authMethod == .sshKey {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("SSH Key Path").font(.caption).foregroundColor(.secondary)
-                            HStack {
-                                TextField("SSH Key Path", text: Binding(
-                                    get: { connection.sshKeyPath ?? "" },
-                                    set: { connection.sshKeyPath = $0.isEmpty ? nil : $0 }
-                                ))
-                                .textFieldStyle(.roundedBorder)
-
-                                Button("Browse") {
-                                    browseSSHKey()
-                                }
-                            }
-                            Text("Leave empty to use ssh-agent default keys")
+                        HStack(spacing: 6) {
+                            Image(systemName: "key.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text("Uses ssh-agent and default keys (~/.ssh/id_*)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -439,17 +430,4 @@ struct ConnectionView: View {
         }
     }
 
-    private func browseSSHKey() {
-        let panel = NSOpenPanel()
-        panel.directoryURL = URL(fileURLWithPath: NSHomeDirectory() + "/.ssh")
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.showsHiddenFiles = true
-        panel.prompt = "Select SSH Key"
-
-        if panel.runModal() == .OK, let url = panel.url {
-            connection.sshKeyPath = url.path
-        }
-    }
 }

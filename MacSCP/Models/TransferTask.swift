@@ -20,6 +20,9 @@ class TransferTask: Identifiable, ObservableObject {
     let remotePath: String
     let fileName: String
     let totalBytes: Int64
+    let connection: ServerConnection
+    let password: String?
+    let tabId: UUID?
 
     @Published var transferredBytes: Int64 = 0
     @Published var status: TransferStatus = .queued
@@ -34,13 +37,19 @@ class TransferTask: Identifiable, ObservableObject {
         localPath: String,
         remotePath: String,
         fileName: String,
-        totalBytes: Int64 = 0
+        totalBytes: Int64 = 0,
+        connection: ServerConnection,
+        password: String?,
+        tabId: UUID?
     ) {
         self.direction = direction
         self.localPath = localPath
         self.remotePath = remotePath
         self.fileName = fileName
         self.totalBytes = totalBytes
+        self.connection = connection
+        self.password = password
+        self.tabId = tabId
     }
 
     var progress: Double {

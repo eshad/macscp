@@ -7,20 +7,11 @@ class TransferManager: ObservableObject {
     @Published var activeTransfers = 0
 
     private let maxConcurrent = 3
-    private var sftpService: SFTPService?
-    private var connection: ServerConnection?
-    private var password: String?
 
-    /// Called when a transfer completes (direction, success)
-    var onTransferCompleted: ((TransferDirection, Bool) -> Void)?
+    /// Called when a transfer completes (direction, success, tabId)
+    var onTransferCompleted: ((TransferDirection, Bool, UUID?) -> Void)?
 
-    func configure(connection: ServerConnection, password: String?) {
-        self.connection = connection
-        self.password = password
-        self.sftpService = SFTPService(connection: connection, password: password)
-    }
-
-    func uploadFile(localPath: String, remotePath: String, fileName: String) {
+    func uploadFile(localPath: String, remotePath: String, fileName: String, connection: ServerConnection, password: String?, tabId: UUID?) {
         let fileSize: Int64 = (try? FileManager.default.attributesOfItem(atPath: localPath)[.size] as? Int64) ?? 0
 
         let task = TransferTask(
@@ -28,20 +19,26 @@ class TransferManager: ObservableObject {
             localPath: localPath,
             remotePath: remotePath,
             fileName: fileName,
-            totalBytes: fileSize
+            totalBytes: fileSize,
+            connection: connection,
+            password: password,
+            tabId: tabId
         )
 
         tasks.insert(task, at: 0)
         processQueue()
     }
 
-    func downloadFile(remotePath: String, localPath: String, fileName: String, remoteSize: Int64) {
+    func downloadFile(remotePath: String, localPath: String, fileName: String, remoteSize: Int64, connection: ServerConnection, password: String?, tabId: UUID?) {
         let task = TransferTask(
             direction: .download,
             localPath: localPath,
             remotePath: remotePath,
             fileName: fileName,
-            totalBytes: remoteSize
+            totalBytes: remoteSize,
+            connection: connection,
+            password: password,
+            tabId: tabId
         )
 
         tasks.insert(task, at: 0)
@@ -66,8 +63,6 @@ class TransferManager: ObservableObject {
     }
 
     private func processQueue() {
-        guard sftpService != nil else { return }
-
         let queued = tasks.filter { $0.status == .queued }
         let available = maxConcurrent - activeTransfers
 
@@ -79,11 +74,7 @@ class TransferManager: ObservableObject {
     }
 
     private func startTransfer(task: TransferTask) {
-        guard let connection = connection else {
-            task.markFailed("No connection configured")
-            activeTransfers = max(0, activeTransfers - 1)
-            return
-        }
+        let connection = task.connection
 
         // Validate paths
         guard !task.localPath.isEmpty, !task.remotePath.isEmpty else {
@@ -98,9 +89,9 @@ class TransferManager: ObservableObject {
         let direction = task.direction
         let sshTarget = connection.sshTarget
         let scpPortArgs = connection.scpPortArgs
-        let sshKeyPath = connection.sshKeyPath
         let escapedRemotePath = scpEscapeRemotePath(remotePath)
         let tmpDir = NSTemporaryDirectory()
+        let tabId = task.tabId
 
         // Everything happens on the background queue - no crossing threads
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -111,10 +102,6 @@ class TransferManager: ObservableObject {
             var args = ["-r"]
             args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
             args.append(contentsOf: scpPortArgs)
-
-            if let keyPath = sshKeyPath, !keyPath.isEmpty {
-                args.append(contentsOf: ["-i", keyPath])
-            }
 
             if direction == .upload {
                 args.append(localPath)
@@ -138,7 +125,7 @@ class TransferManager: ObservableObject {
                 DispatchQueue.main.async {
                     task.markFailed(error.localizedDescription)
                     self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
-                    self?.onTransferCompleted?(direction, false)
+                    self?.onTransferCompleted?(direction, false, tabId)
                     self?.processQueue()
                 }
                 return
@@ -172,7 +159,7 @@ class TransferManager: ObservableObject {
                     success = false
                 }
                 self?.activeTransfers = max(0, (self?.activeTransfers ?? 1) - 1)
-                self?.onTransferCompleted?(direction, success)
+                self?.onTransferCompleted?(direction, success, tabId)
                 self?.processQueue()
             }
         }

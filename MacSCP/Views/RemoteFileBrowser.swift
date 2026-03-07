@@ -21,6 +21,7 @@ struct RemoteFileBrowser: View {
 
     var onNavigate: (String) -> Void
     var onDownload: ([FileItem]) -> Void
+    var onEditFile: ((FileItem) -> Void)?
     var onDelete: (FileItem) -> Void
     var onRename: (FileItem, String) -> Void
     var onCreateFolder: (String) -> Void
@@ -273,6 +274,12 @@ struct RemoteFileBrowser: View {
             onDownload([item])
         }
 
+        if item.isEditableText, let onEditFile = onEditFile {
+            Button("Edit") {
+                onEditFile(item)
+            }
+        }
+
         Divider()
 
         Button("Rename") {
@@ -404,6 +411,8 @@ struct RemoteFileBrowser: View {
         if item.isDirectory {
             navigateTo(item.fullPath)
             selectedItems.removeAll()
+        } else if item.isEditableText, let onEditFile = onEditFile {
+            onEditFile(item)
         } else {
             onDownload([item])
         }

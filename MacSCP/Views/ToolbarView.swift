@@ -1,11 +1,12 @@
 import SwiftUI
 
 struct ToolbarView: View {
-    let isConnected: Bool
-    let connectionName: String
+    let tabCount: Int
+    let selectedTabName: String?
     var onConnect: () -> Void
     var onDisconnect: () -> Void
     var onRefresh: () -> Void
+    var onAbout: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -21,14 +22,19 @@ struct ToolbarView: View {
                 .frame(height: 20)
 
             // Connection status
-            if isConnected {
+            if let name = selectedTabName {
                 HStack(spacing: 6) {
                     Circle()
                         .fill(.green)
                         .frame(width: 8, height: 8)
-                    Text(connectionName)
+                    Text(name)
                         .font(.body)
                         .foregroundColor(.primary)
+                    if tabCount > 1 {
+                        Text("(\(tabCount) connections)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             } else {
                 HStack(spacing: 6) {
@@ -50,17 +56,25 @@ struct ToolbarView: View {
             .keyboardShortcut("r", modifiers: .command)
             .help("Refresh (Cmd+R)")
 
-            if isConnected {
+            if tabCount > 0 {
                 Button(action: onDisconnect) {
                     Label("Disconnect", systemImage: "bolt.horizontal.circle")
                 }
-                .help("Disconnect")
-            } else {
-                Button(action: onConnect) {
-                    Label("Connect", systemImage: "point.3.connected.trianglepath.dotted")
-                }
-                .help("Connect to Server")
+                .help("Disconnect active tab")
             }
+
+            Button(action: onConnect) {
+                Label("Connect", systemImage: "point.3.connected.trianglepath.dotted")
+            }
+            .help("Connect to Server")
+
+            Divider()
+                .frame(height: 20)
+
+            Button(action: onAbout) {
+                Label("About", systemImage: "info.circle")
+            }
+            .help("About MacSCP")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
