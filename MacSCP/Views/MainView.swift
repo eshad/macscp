@@ -147,8 +147,8 @@ struct MainView: View {
                         onEditFile: { item in
                             editRemoteFile(item, tab: tab)
                         },
-                        onDelete: { item in
-                            deleteRemoteItem(item, tabId: tab.id)
+                        onDelete: { items in
+                            deleteRemoteItems(items, tabId: tab.id)
                         },
                         onRename: { item, newName in
                             renameRemoteItem(item, to: newName, tabId: tab.id)
@@ -418,12 +418,13 @@ struct MainView: View {
         }
     }
 
-    private func deleteRemoteItem(_ item: FileItem, tabId: UUID) {
+    private func deleteRemoteItems(_ items: [FileItem], tabId: UUID) {
         guard let index = tabManager.tabs.firstIndex(where: { $0.id == tabId }),
               let service = tabManager.tabs[index].sftpService else { return }
         Task {
             do {
-                try await service.delete(at: item.fullPath, isDirectory: item.isDirectory)
+                let deleteItems = items.map { (path: $0.fullPath, isDirectory: $0.isDirectory) }
+                try await service.deleteMultiple(deleteItems)
                 loadRemoteFiles(tabId: tabId)
             } catch {
                 await MainActor.run {

@@ -33,6 +33,16 @@ actor SFTPService {
         _ = try await ssh.execute("rm \(flag) \(escapePath(path))")
     }
 
+    /// Delete multiple files/directories in a single SSH command
+    func deleteMultiple(_ items: [(path: String, isDirectory: Bool)]) async throws {
+        guard !items.isEmpty else { return }
+        let commands = items.map { item in
+            let flag = item.isDirectory ? "-rf" : "-f"
+            return "rm \(flag) \(escapePath(item.path))"
+        }
+        _ = try await ssh.execute(commands.joined(separator: " && "))
+    }
+
     /// Rename/move a file
     func rename(from oldPath: String, to newPath: String) async throws {
         _ = try await ssh.execute("mv \(escapePath(oldPath)) \(escapePath(newPath))")

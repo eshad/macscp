@@ -24,7 +24,7 @@ struct RemoteFileBrowser: View {
     var onNavigate: (String) -> Void
     var onDownload: ([FileItem]) -> Void
     var onEditFile: ((FileItem) -> Void)?
-    var onDelete: (FileItem) -> Void
+    var onDelete: ([FileItem]) -> Void
     var onRename: (FileItem, String) -> Void
     var onCreateFolder: (String) -> Void
     var onListRemoteDirectory: ((String) async throws -> [String])?
@@ -149,9 +149,7 @@ struct RemoteFileBrowser: View {
         .alert("Delete \(itemsToDelete.count) item\(itemsToDelete.count == 1 ? "" : "s")?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                for item in itemsToDelete {
-                    onDelete(item)
-                }
+                onDelete(itemsToDelete)
                 selectedItems.removeAll()
                 itemsToDelete.removeAll()
             }
