@@ -136,6 +136,7 @@ struct MainView: View {
                             }
                         ),
                         isConnected: tab.isConnected,
+                        homePath: tab.homePath,
                         onNavigate: { path in
                             tabManager.updateTab(tab.id) { $0.remotePath = path }
                             loadRemoteFiles(tabId: tab.id)
@@ -323,6 +324,7 @@ struct MainView: View {
                     await MainActor.run {
                         tabManager.updateTab(tabId) {
                             $0.isConnected = true
+                            $0.homePath = home
                             $0.remotePath = home
                             $0.remoteFiles = files
                             $0.isLoadingRemote = false

@@ -7,6 +7,7 @@ struct RemoteTab: Identifiable {
     var password: String?
     var sftpService: SFTPService?
     var remotePath: String = "~"
+    var homePath: String = "~"
     var remoteFiles: [FileItem] = []
     var isLoadingRemote: Bool = false
     var isConnected: Bool = false

@@ -20,6 +20,7 @@ struct RemoteFileBrowser: View {
     @State private var pathHistory: [String] = []
     @State private var pathForwardHistory: [String] = []
 
+    var homePath: String = "~"
     var onNavigate: (String) -> Void
     var onDownload: ([FileItem]) -> Void
     var onEditFile: ((FileItem) -> Void)?
@@ -70,6 +71,13 @@ struct RemoteFileBrowser: View {
                         .buttonStyle(.borderless)
                         .disabled(currentPath == "/")
                         .help("Parent Directory")
+
+                        Button(action: goHome) {
+                            Image(systemName: "house")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Home Directory")
                     }
 
                     Button(action: { showNewFolderSheet = true }) {
@@ -444,6 +452,12 @@ struct RemoteFileBrowser: View {
         guard currentPath != "/" else { return }
         let parent = (currentPath as NSString).deletingLastPathComponent
         navigateTo(parent)
+    }
+
+    private func goHome() {
+        if currentPath != homePath {
+            navigateTo(homePath)
+        }
     }
 
     private func handleUploadDrop(_ providers: [NSItemProvider], targetPath: String) -> Bool {
