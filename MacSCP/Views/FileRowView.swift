@@ -287,6 +287,13 @@ struct KeyEventHandler: NSViewRepresentable {
                           self.window?.isKeyWindow == true,
                           self.isMouseInsidePanel() else { return event }
 
+                    // Check if a text field has focus — if so, don't intercept
+                    if let responder = self.window?.firstResponder,
+                       responder is NSTextView || responder is NSTextField {
+                        // Only handle Cmd+A in text fields (let system handle it)
+                        return event
+                    }
+
                     // Cmd+A: select all
                     if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "a" {
                         self.onSelectAll?()

@@ -10,6 +10,7 @@ struct PathBarView: View {
     @State private var editText = ""
     @State private var suggestions: [PathSuggestion] = []
     @State private var showSuggestions = false
+    @State private var selectedSuggestionIndex: Int = -1
     @FocusState private var isTextFieldFocused: Bool
 
     struct PathSuggestion: Identifiable, Hashable {
@@ -73,19 +74,34 @@ struct PathBarView: View {
                 .font(.system(size: 10))
                 .foregroundColor(.accentColor)
 
-            TextField("Enter path...", text: $editText)
-                .font(.system(size: 12, design: .monospaced))
-                .textFieldStyle(.plain)
-                .focused($isTextFieldFocused)
-                .onSubmit {
-                    navigateToPath(editText)
-                }
-                .onChange(of: editText) { _ in
+            PathTextField(
+                text: $editText,
+                isFocused: $isTextFieldFocused,
+                onSubmit: {
+                    if selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.count {
+                        handleSuggestionTap(suggestions[selectedSuggestionIndex])
+                    } else {
+                        navigateToPath(editText)
+                    }
+                },
+                onArrowUp: {
+                    if showSuggestions && !suggestions.isEmpty {
+                        selectedSuggestionIndex = max(selectedSuggestionIndex - 1, 0)
+                    }
+                },
+                onArrowDown: {
+                    if showSuggestions && !suggestions.isEmpty {
+                        selectedSuggestionIndex = min(selectedSuggestionIndex + 1, suggestions.count - 1)
+                    }
+                },
+                onEscape: {
+                    cancelEditing()
+                },
+                onTextChange: {
+                    selectedSuggestionIndex = -1
                     updateSuggestions()
                 }
-                .onExitCommand {
-                    cancelEditing()
-                }
+            )
 
             Button(action: { navigateToPath(editText) }) {
                 Image(systemName: "arrow.right.circle.fill")
@@ -115,8 +131,8 @@ struct PathBarView: View {
     private var suggestionsList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(suggestions) { suggestion in
-                    suggestionRow(suggestion)
+                ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                    suggestionRow(suggestion, isSelected: index == selectedSuggestionIndex)
 
                     if suggestion.id != suggestions.last?.id {
                         Divider().padding(.leading, 32)
@@ -132,7 +148,7 @@ struct PathBarView: View {
         )
     }
 
-    private func suggestionRow(_ suggestion: PathSuggestion) -> some View {
+    private func suggestionRow(_ suggestion: PathSuggestion, isSelected: Bool = false) -> some View {
         let iconName = suggestion.isDirectory ? "folder.fill" : "doc.fill"
         let iconColor: Color = suggestion.isDirectory ? .blue : .secondary
 
@@ -157,10 +173,11 @@ struct PathBarView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .contentShape(Rectangle())
+        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .cornerRadius(3)
         .onTapGesture {
             handleSuggestionTap(suggestion)
         }
-        .background(Color.clear)
         .onHover { hovering in
             if hovering {
                 NSCursor.pointingHand.push()
@@ -221,6 +238,11 @@ struct PathBarView: View {
         } else {
             updateLocalSuggestions(text)
         }
+    }
+
+    // MARK: - Reset suggestion index on new suggestions
+    private func resetSuggestionIndex() {
+        selectedSuggestionIndex = -1
     }
 
     private func updateLocalSuggestions(_ text: String) {
@@ -334,4 +356,90 @@ struct PathBarView: View {
             }
         }
     }
+}
+
+// MARK: - Path Text Field with arrow key interception
+
+struct PathTextField: NSViewRepresentable {
+    @Binding var text: String
+    var isFocused: FocusState<Bool>.Binding
+    var onSubmit: () -> Void
+    var onArrowUp: () -> Void
+    var onArrowDown: () -> Void
+    var onEscape: () -> Void
+    var onTextChange: () -> Void
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = ArrowKeyTextField()
+        field.delegate = context.coordinator
+        field.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        field.isBordered = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.stringValue = text
+        field.onArrowUp = onArrowUp
+        field.onArrowDown = onArrowDown
+        field.onEscapeKey = onEscape
+        return field
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        if let field = nsView as? ArrowKeyTextField {
+            field.onArrowUp = onArrowUp
+            field.onArrowDown = onArrowDown
+            field.onEscapeKey = onEscape
+        }
+        if isFocused.wrappedValue {
+            DispatchQueue.main.async {
+                nsView.window?.makeFirstResponder(nsView)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        let parent: PathTextField
+
+        init(_ parent: PathTextField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let field = obj.object as? NSTextField else { return }
+            parent.text = field.stringValue
+            parent.onTextChange()
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                parent.onEscape()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                parent.onArrowUp()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                parent.onArrowDown()
+                return true
+            }
+            return false
+        }
+    }
+}
+
+class ArrowKeyTextField: NSTextField {
+    var onArrowUp: (() -> Void)?
+    var onArrowDown: (() -> Void)?
+    var onEscapeKey: (() -> Void)?
 }
