@@ -6,6 +6,7 @@ struct LocalFileBrowser: View {
     @Binding var files: [FileItem]
     @Binding var isLoading: Bool
     @State private var selectedItems: Set<FileItem> = []
+    @State private var showDeleteConfirm = false
     @StateObject private var columnWidths = ColumnWidths()
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
@@ -188,6 +189,34 @@ struct LocalFileBrowser: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .environmentObject(columnWidths)
+        .alert("Delete \(selectedItems.count) item\(selectedItems.count == 1 ? "" : "s")?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteSelectedItems()
+            }
+        } message: {
+            let names = selectedItems.prefix(3).map { $0.name }.joined(separator: ", ")
+            let extra = selectedItems.count > 3 ? " and \(selectedItems.count - 3) more" : ""
+            Text("This will permanently delete \(names)\(extra).")
+        }
+        .background(
+            KeyEventHandler(onSelectAll: {
+                selectedItems = Set(sortedFiles)
+            }, onDelete: {
+                if !selectedItems.isEmpty {
+                    showDeleteConfirm = true
+                }
+            })
+            .frame(width: 0, height: 0)
+        )
+    }
+
+    private func deleteSelectedItems() {
+        for item in selectedItems {
+            try? FileManager.default.removeItem(atPath: item.fullPath)
+        }
+        selectedItems.removeAll()
+        onNavigate(currentPath)
     }
 
     // Handle drops from Finder, remote pane, or any file URL source

@@ -12,7 +12,7 @@ struct RemoteFileBrowser: View {
     @State private var renamingItem: FileItem?
     @State private var renameText = ""
     @State private var showDeleteConfirm = false
-    @State private var itemToDelete: FileItem?
+    @State private var itemsToDelete: [FileItem] = []
     @StateObject private var columnWidths = ColumnWidths()
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
@@ -116,23 +116,37 @@ struct RemoteFileBrowser: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .environmentObject(columnWidths)
+        .background(
+            KeyEventHandler(onSelectAll: {
+                selectedItems = Set(sortedFiles)
+            }, onDelete: {
+                if !selectedItems.isEmpty {
+                    itemsToDelete = Array(selectedItems)
+                    showDeleteConfirm = true
+                }
+            })
+            .frame(width: 0, height: 0)
+        )
         .sheet(isPresented: $showNewFolderSheet) {
             newFolderSheet
         }
         .sheet(item: $renamingItem) { item in
             renameSheet(item: item)
         }
-        .alert("Delete Item", isPresented: $showDeleteConfirm) {
+        .alert("Delete \(itemsToDelete.count) item\(itemsToDelete.count == 1 ? "" : "s")?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                if let item = itemToDelete {
+                for item in itemsToDelete {
                     onDelete(item)
                 }
+                selectedItems.removeAll()
+                itemsToDelete.removeAll()
             }
         } message: {
-            if let item = itemToDelete {
-                Text("Are you sure you want to delete \"\(item.name)\"?\(item.isDirectory ? " This will delete all contents." : "")")
-            }
+            let names = itemsToDelete.prefix(3).map { $0.name }.joined(separator: ", ")
+            let extra = itemsToDelete.count > 3 ? " and \(itemsToDelete.count - 3) more" : ""
+            let hasDirs = itemsToDelete.contains { $0.isDirectory }
+            Text("This will permanently delete \(names)\(extra).\(hasDirs ? " Directories and all contents will be removed." : "")")
         }
     }
 
@@ -311,7 +325,7 @@ struct RemoteFileBrowser: View {
         Divider()
 
         Button("Delete", role: .destructive) {
-            itemToDelete = item
+            itemsToDelete = [item]
             showDeleteConfirm = true
         }
     }

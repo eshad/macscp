@@ -204,6 +204,62 @@ struct ColumnDragHandle: View {
     }
 }
 
+// MARK: - Key Event Handler
+
+struct KeyEventHandler: NSViewRepresentable {
+    let onSelectAll: () -> Void
+    let onDelete: () -> Void
+
+    func makeNSView(context: Context) -> KeyEventView {
+        let view = KeyEventView()
+        view.onSelectAll = onSelectAll
+        view.onDelete = onDelete
+        return view
+    }
+
+    func updateNSView(_ nsView: KeyEventView, context: Context) {
+        nsView.onSelectAll = onSelectAll
+        nsView.onDelete = onDelete
+    }
+
+    class KeyEventView: NSView {
+        var onSelectAll: (() -> Void)?
+        var onDelete: (() -> Void)?
+        private var monitor: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil && monitor == nil {
+                monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                    guard let self = self, self.window?.isKeyWindow == true else { return event }
+
+                    // Cmd+A: select all
+                    if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "a" {
+                        self.onSelectAll?()
+                        return nil
+                    }
+
+                    // Delete / Backspace
+                    if event.keyCode == 51 || event.keyCode == 117 {
+                        self.onDelete?()
+                        return nil
+                    }
+
+                    return event
+                }
+            }
+        }
+
+        override func removeFromSuperview() {
+            if let monitor = monitor {
+                NSEvent.removeMonitor(monitor)
+                self.monitor = nil
+            }
+            super.removeFromSuperview()
+        }
+    }
+}
+
 // MARK: - Cursor Extension
 
 extension View {
