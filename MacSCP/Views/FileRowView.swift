@@ -190,16 +190,17 @@ struct FileListHeader: View {
 
 struct ColumnDragHandle: View {
     var body: some View {
-        Rectangle()
-            .fill(Color.secondary.opacity(0.3))
-            .frame(width: 1)
-            .padding(.vertical, 2)
-            .overlay(
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: 8)
-                    .cursor(.resizeLeftRight)
-            )
+        ZStack {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 1, height: 14)
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: 12, height: 20)
+                .contentShape(Rectangle())
+                .cursor(.resizeLeftRight)
+        }
+        .frame(width: 12, height: 20)
     }
 }
 
