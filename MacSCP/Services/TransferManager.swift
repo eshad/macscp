@@ -89,6 +89,7 @@ class TransferManager: ObservableObject {
         let direction = task.direction
         let sshTarget = connection.sshTarget
         let scpPortArgs = connection.scpPortArgs
+        let sshIdentityArgs = connection.sshIdentityArgs
         let escapedRemotePath = scpEscapeRemotePath(remotePath)
         let tmpDir = NSTemporaryDirectory()
         let tabId = task.tabId
@@ -102,6 +103,7 @@ class TransferManager: ObservableObject {
             var args = ["-r"]
             args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
             args.append(contentsOf: scpPortArgs)
+            args.append(contentsOf: sshIdentityArgs)
 
             if direction == .upload {
                 args.append(localPath)

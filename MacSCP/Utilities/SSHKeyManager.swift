@@ -99,7 +99,8 @@ struct SSHConfigHost: Identifiable {
             host: hostname,
             port: port,
             username: user,
-            authMethod: .sshKey
+            authMethod: .sshKey,
+            identityFilePath: identityFile
         )
     }
 }

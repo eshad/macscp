@@ -27,6 +27,7 @@ actor SSHService {
         args.append(contentsOf: ["-o", "ConnectTimeout=10"])
         args.append(contentsOf: ["-o", "BatchMode=\(password == nil ? "yes" : "no")"])
         args.append(contentsOf: connection.sshPortArgs)
+        args.append(contentsOf: connection.sshIdentityArgs)
 
         return args
     }

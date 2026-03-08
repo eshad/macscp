@@ -383,13 +383,59 @@ struct ConnectionView: View {
                     .pickerStyle(.segmented)
 
                     if connection.authMethod == .sshKey {
-                        HStack(spacing: 6) {
-                            Image(systemName: "key.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                            Text("Uses ssh-agent and default keys (~/.ssh/id_*)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Identity File (.pem / private key)").font(.caption).foregroundColor(.secondary)
+                            HStack(spacing: 8) {
+                                TextField("Default (ssh-agent)", text: Binding(
+                                    get: { connection.identityFilePath ?? "" },
+                                    set: { connection.identityFilePath = $0.isEmpty ? nil : $0 }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+
+                                Button("Browse...") {
+                                    let panel = NSOpenPanel()
+                                    panel.title = "Select SSH Key / PEM File"
+                                    panel.allowsMultipleSelection = false
+                                    panel.canChooseDirectories = false
+                                    panel.canChooseFiles = true
+                                    panel.showsHiddenFiles = true
+                                    panel.directoryURL = URL(fileURLWithPath: NSHomeDirectory() + "/.ssh")
+                                    if panel.runModal() == .OK, let url = panel.url {
+                                        connection.identityFilePath = url.path
+                                    }
+                                }
+                            }
+
+                            if let path = connection.identityFilePath, !path.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "key.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text(path)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    Spacer()
+                                    Button {
+                                        connection.identityFilePath = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } else {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "key.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text("Uses ssh-agent and default keys (~/.ssh/id_*)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 6) {

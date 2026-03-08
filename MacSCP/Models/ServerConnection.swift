@@ -12,6 +12,7 @@ struct ServerConnection: Identifiable, Codable, Hashable {
     var port: Int
     var username: String
     var authMethod: AuthMethod
+    var identityFilePath: String?
     var lastConnected: Date?
 
     init(
@@ -21,6 +22,7 @@ struct ServerConnection: Identifiable, Codable, Hashable {
         port: Int = 22,
         username: String = "",
         authMethod: AuthMethod = .sshKey,
+        identityFilePath: String? = nil,
         lastConnected: Date? = nil
     ) {
         self.id = id
@@ -29,6 +31,7 @@ struct ServerConnection: Identifiable, Codable, Hashable {
         self.port = port
         self.username = username
         self.authMethod = authMethod
+        self.identityFilePath = identityFilePath
         self.lastConnected = lastConnected
     }
 
@@ -51,6 +54,11 @@ struct ServerConnection: Identifiable, Codable, Hashable {
 
     var scpPortArgs: [String] {
         port == 22 ? [] : ["-P", "\(port)"]
+    }
+
+    var sshIdentityArgs: [String] {
+        guard let path = identityFilePath, !path.isEmpty else { return [] }
+        return ["-i", path]
     }
 }
 

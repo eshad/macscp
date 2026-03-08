@@ -84,6 +84,7 @@ actor SFTPService {
         var args = ["-r"]
         args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
         args.append(contentsOf: connection.scpPortArgs)
+        args.append(contentsOf: connection.sshIdentityArgs)
 
         args.append("\(connection.sshTarget):\(scpEscapeRemotePath(remotePath))")
         args.append(localPath)
@@ -100,6 +101,7 @@ actor SFTPService {
         var args = ["-r"]
         args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
         args.append(contentsOf: connection.scpPortArgs)
+        args.append(contentsOf: connection.sshIdentityArgs)
 
         args.append(localPath)
         args.append("\(connection.sshTarget):\(scpEscapeRemotePath(remotePath))")

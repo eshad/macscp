@@ -26,6 +26,7 @@
 		A10000170000000000000011 /* SSHKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000170000000000000011; };
 		A10000180000000000000012 /* PathBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000012; };
 		A1000020000000000000001A /* RemoteTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020000000000000001A; };
+		A10000210000000000000021 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000210000000000000021; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		A20000070000000000000007 /* TransferManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferManager.swift; sourceTree = "<group>"; };
 		A20000080000000000000008 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A20000090000000000000009 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		A20000210000000000000021 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		A2000010000000000000000A /* LocalFileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileBrowser.swift; sourceTree = "<group>"; };
 		A2000011000000000000000B /* RemoteFileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteFileBrowser.swift; sourceTree = "<group>"; };
 		A2000012000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 			children = (
 				A20000080000000000000008 /* MainView.swift */,
 				A20000090000000000000009 /* ConnectionView.swift */,
+				A20000210000000000000021 /* AboutView.swift */,
 				A2000010000000000000000A /* LocalFileBrowser.swift */,
 				A2000011000000000000000B /* RemoteFileBrowser.swift */,
 				A2000012000000000000000C /* FileRowView.swift */,
@@ -225,6 +228,7 @@
 				A10000170000000000000011 /* SSHKeyManager.swift in Sources */,
 				A10000180000000000000012 /* PathBarView.swift in Sources */,
 				A1000020000000000000001A /* RemoteTextEditorView.swift in Sources */,
+				A10000210000000000000021 /* AboutView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
