@@ -237,13 +237,55 @@ struct KeyEventHandler: NSViewRepresentable {
         var onArrowUp: (() -> Void)?
         var onArrowDown: (() -> Void)?
         var onReturn: (() -> Void)?
+        var isHovered = false
         private var monitor: Any?
+        private var trackingArea: NSTrackingArea?
+
+        /// Find the top-level panel ancestor (the outermost view within the split)
+        private func panelBounds() -> NSRect? {
+            // Walk up to find a sizeable parent that represents the panel
+            var current: NSView? = superview
+            while let view = current {
+                if view.frame.height > 200 && view.frame.width > 100 {
+                    return view.convert(view.bounds, to: nil)
+                }
+                current = view.superview
+            }
+            return nil
+        }
+
+        private func isMouseInsidePanel() -> Bool {
+            guard let window = self.window else { return false }
+            let mouseLocation = window.mouseLocationOutsideOfEventStream
+            if let panelRect = panelBounds() {
+                return panelRect.contains(mouseLocation)
+            }
+            return false
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = trackingArea {
+                removeTrackingArea(existing)
+            }
+            // Track mouse on the full window area - we check panel bounds in the handler
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            trackingArea = area
+        }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             if window != nil && monitor == nil {
                 monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                    guard let self = self, self.window?.isKeyWindow == true else { return event }
+                    guard let self = self,
+                          self.window?.isKeyWindow == true,
+                          self.isMouseInsidePanel() else { return event }
 
                     // Cmd+A: select all
                     if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "a" {
