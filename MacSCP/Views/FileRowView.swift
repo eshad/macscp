@@ -1,42 +1,56 @@
 import SwiftUI
 
+class ColumnWidths: ObservableObject {
+    @Published var size: CGFloat = 70
+    @Published var modified: CGFloat = 130
+    @Published var permissions: CGFloat = 90
+
+    static let minSize: CGFloat = 50
+    static let minModified: CGFloat = 80
+    static let minPermissions: CGFloat = 60
+}
+
 struct FileRowView: View {
     let item: FileItem
     var isSelected: Bool = false
     var isDropTarget: Bool = false
+    @EnvironmentObject var columnWidths: ColumnWidths
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Icon
-            Image(systemName: item.icon)
-                .font(.system(size: 16))
-                .foregroundColor(iconColor)
-                .frame(width: 20)
+        HStack(spacing: 0) {
+            // Icon + Name
+            HStack(spacing: 8) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(iconColor)
+                    .frame(width: 20)
 
-            // Name
-            Text(item.name)
-                .lineLimit(1)
-                .truncationMode(.middle)
-
-            Spacer()
+                Text(item.name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Size
             Text(item.formattedSize)
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .frame(width: 70, alignment: .trailing)
+                .frame(width: columnWidths.size, alignment: .trailing)
+                .padding(.horizontal, 4)
 
             // Date
             Text(item.formattedDate)
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .frame(width: 130, alignment: .trailing)
+                .frame(width: columnWidths.modified, alignment: .trailing)
+                .padding(.horizontal, 4)
 
             // Permissions
             Text(item.permissions)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.secondary)
-                .frame(width: 90, alignment: .trailing)
+                .frame(width: columnWidths.permissions, alignment: .trailing)
+                .padding(.horizontal, 4)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -113,25 +127,92 @@ struct DragPreviewView: View {
 // MARK: - Column Header
 
 struct FileListHeader: View {
+    @EnvironmentObject var columnWidths: ColumnWidths
+    @State private var dragStartSize: CGFloat = 0
+    @State private var dragStartModified: CGFloat = 0
+    @State private var dragStartPermissions: CGFloat = 0
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             Text("Name")
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 36)
 
+            ColumnDragHandle()
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            if dragStartSize == 0 { dragStartSize = columnWidths.size }
+                            columnWidths.size = max(ColumnWidths.minSize, dragStartSize - value.translation.width)
+                        }
+                        .onEnded { _ in dragStartSize = 0 }
+                )
+
             Text("Size")
-                .frame(width: 70, alignment: .trailing)
+                .frame(width: columnWidths.size, alignment: .trailing)
+                .padding(.horizontal, 4)
+
+            ColumnDragHandle()
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            if dragStartModified == 0 { dragStartModified = columnWidths.modified }
+                            columnWidths.modified = max(ColumnWidths.minModified, dragStartModified - value.translation.width)
+                        }
+                        .onEnded { _ in dragStartModified = 0 }
+                )
 
             Text("Modified")
-                .frame(width: 130, alignment: .trailing)
+                .frame(width: columnWidths.modified, alignment: .trailing)
+                .padding(.horizontal, 4)
+
+            ColumnDragHandle()
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            if dragStartPermissions == 0 { dragStartPermissions = columnWidths.permissions }
+                            columnWidths.permissions = max(ColumnWidths.minPermissions, dragStartPermissions - value.translation.width)
+                        }
+                        .onEnded { _ in dragStartPermissions = 0 }
+                )
 
             Text("Permissions")
-                .frame(width: 90, alignment: .trailing)
+                .frame(width: columnWidths.permissions, alignment: .trailing)
+                .padding(.horizontal, 4)
         }
         .font(.caption.bold())
         .foregroundColor(.secondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+}
+
+struct ColumnDragHandle: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.secondary.opacity(0.3))
+            .frame(width: 1)
+            .padding(.vertical, 2)
+            .overlay(
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 8)
+                    .cursor(.resizeLeftRight)
+            )
+    }
+}
+
+// MARK: - Cursor Extension
+
+extension View {
+    func cursor(_ cursor: NSCursor) -> some View {
+        self.onHover { inside in
+            if inside {
+                cursor.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
     }
 }

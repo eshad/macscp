@@ -13,6 +13,7 @@ struct RemoteFileBrowser: View {
     @State private var renameText = ""
     @State private var showDeleteConfirm = false
     @State private var itemToDelete: FileItem?
+    @StateObject private var columnWidths = ColumnWidths()
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
     @State private var isDropTargeted = false
@@ -106,6 +107,7 @@ struct RemoteFileBrowser: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+        .environmentObject(columnWidths)
         .sheet(isPresented: $showNewFolderSheet) {
             newFolderSheet
         }

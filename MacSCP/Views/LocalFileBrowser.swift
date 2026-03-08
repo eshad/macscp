@@ -6,6 +6,7 @@ struct LocalFileBrowser: View {
     @Binding var files: [FileItem]
     @Binding var isLoading: Bool
     @State private var selectedItems: Set<FileItem> = []
+    @StateObject private var columnWidths = ColumnWidths()
     @State private var sortOrder: SortOrder = .name
     @State private var dropTargetItemId: UUID?
     @State private var isDropTargeted = false
@@ -186,6 +187,7 @@ struct LocalFileBrowser: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+        .environmentObject(columnWidths)
     }
 
     // Handle drops from Finder, remote pane, or any file URL source
