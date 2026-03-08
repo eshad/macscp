@@ -27,6 +27,7 @@
 		A10000180000000000000012 /* PathBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000180000000000000012; };
 		A1000020000000000000001A /* RemoteTextEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020000000000000001A; };
 		A10000210000000000000021 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000210000000000000021; };
+		A10000300000000000000030 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A20000300000000000000030 /* AppIcon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		A20000080000000000000008 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A20000090000000000000009 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
 		A20000210000000000000021 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		A20000300000000000000030 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		A2000010000000000000000A /* LocalFileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileBrowser.swift; sourceTree = "<group>"; };
 		A2000011000000000000000B /* RemoteFileBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteFileBrowser.swift; sourceTree = "<group>"; };
 		A2000012000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
@@ -81,6 +83,7 @@
 				A50000000000000000000004 /* Services */,
 				A50000000000000000000005 /* Views */,
 				A50000000000000000000006 /* Utilities */,
+				A50000000000000000000008 /* Resources */,
 				A30000000000000000000002 /* MacSCP.entitlements */,
 			);
 			path = MacSCP;
@@ -131,6 +134,14 @@
 				A20000170000000000000011 /* SSHKeyManager.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000300000000000000030 /* AppIcon.icns */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		A50000000000000000000007 /* Products */ = {
@@ -199,6 +210,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000300000000000000030 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,8 +366,8 @@
 		B10000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MacSCP/MacSCP.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -365,6 +377,7 @@
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacSCP/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -383,8 +396,8 @@
 		B10000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MacSCP/MacSCP.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -394,6 +407,7 @@
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MacSCP/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
