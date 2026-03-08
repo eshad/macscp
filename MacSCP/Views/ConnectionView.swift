@@ -3,6 +3,7 @@ import SwiftUI
 enum SidebarTab: String, CaseIterable {
     case sshConfig = "SSH Config"
     case saved = "Saved"
+    case history = "History"
 }
 
 struct ConnectionView: View {
@@ -77,7 +78,7 @@ struct ConnectionView: View {
 
                 Button("Connect") {
                     let pwd = connection.authMethod == .password ? password : nil
-                    connectionManager.saveConnection(connection)
+                    connectionManager.addToHistory(connection)
                     dismiss()
                     onConnect(connection, pwd)
                 }
@@ -112,6 +113,8 @@ struct ConnectionView: View {
                 sshConfigList
             case .saved:
                 savedConnectionsList
+            case .history:
+                historyConnectionsList
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
@@ -235,7 +238,7 @@ struct ConnectionView: View {
             selectSSHConfigHost(host)
             // Quick connect on double-click
             let pwd: String? = nil
-            connectionManager.saveConnection(connection)
+            connectionManager.addToHistory(connection)
             dismiss()
             onConnect(connection, pwd)
         }
@@ -263,13 +266,13 @@ struct ConnectionView: View {
             if connectionManager.savedConnections.isEmpty {
                 VStack {
                     Spacer()
-                    Image(systemName: "externaldrive.connected.to.line.below")
+                    Image(systemName: "bookmark")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary)
                     Text("No saved connections")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("Connect to save")
+                    Text("Use the bookmark button to save")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -278,55 +281,104 @@ struct ConnectionView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(connectionManager.savedConnections) { saved in
-                            HStack(spacing: 8) {
-                                Image(systemName: "server.rack")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.accentColor)
-                                    .frame(width: 16)
-
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(saved.displayName)
-                                        .font(.body.bold())
-                                        .lineLimit(1)
-                                    Text("\(saved.host):\(saved.port)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .contentShape(Rectangle())
-                            .background(
-                                selectedSaved?.id == saved.id
-                                    ? Color.accentColor.opacity(0.15)
-                                    : Color.clear
-                            )
-                            .cornerRadius(4)
-                            .onTapGesture {
-                                connection = saved
-                                selectedSaved = saved
-                                testResult = nil
-                            }
-                            .onTapGesture(count: 2) {
-                                connection = saved
-                                let pwd: String? = nil
-                                connectionManager.saveConnection(connection)
-                                dismiss()
-                                onConnect(connection, pwd)
-                            }
-                            .contextMenu {
-                                Button("Delete", role: .destructive) {
-                                    connectionManager.deleteConnection(saved)
-                                }
-                            }
-
-                            Divider().padding(.leading, 32)
+                            connectionRow(saved)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private var historyConnectionsList: some View {
+        VStack(spacing: 0) {
+            if connectionManager.historyConnections.isEmpty {
+                VStack {
+                    Spacer()
+                    Image(systemName: "clock")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                    Text("No connection history")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Recent connections appear here")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(connectionManager.historyConnections) { entry in
+                            connectionRow(entry)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func connectionRow(_ entry: ServerConnection) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: entry.isSaved ? "bookmark.fill" : "clock")
+                    .font(.system(size: 12))
+                    .foregroundColor(entry.isSaved ? .accentColor : .secondary)
+                    .frame(width: 16)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(entry.displayName)
+                        .font(.body.bold())
+                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text("\(entry.host):\(entry.port)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        if entry.identityFilePath != nil {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+            .background(
+                selectedSaved?.id == entry.id
+                    ? Color.accentColor.opacity(0.15)
+                    : Color.clear
+            )
+            .cornerRadius(4)
+            .onTapGesture {
+                connection = entry
+                selectedSaved = entry
+                testResult = nil
+            }
+            .onTapGesture(count: 2) {
+                connection = entry
+                connectionManager.addToHistory(connection)
+                dismiss()
+                onConnect(connection, connection.authMethod == .password ? password : nil)
+            }
+            .contextMenu {
+                if entry.isSaved {
+                    Button("Remove from Saved") {
+                        connectionManager.unsaveConnection(entry)
+                    }
+                } else {
+                    Button("Save Connection") {
+                        connectionManager.saveConnection(entry)
+                    }
+                }
+                Button("Delete", role: .destructive) {
+                    connectionManager.deleteConnection(entry)
+                }
+            }
+
+            Divider().padding(.leading, 32)
         }
     }
 
@@ -444,6 +496,25 @@ struct ConnectionView: View {
                                 .textFieldStyle(.roundedBorder)
                         }
                     }
+                }
+
+                Divider()
+
+                // Save button
+                HStack {
+                    Button {
+                        connectionManager.saveConnection(connection)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: connection.isSaved ? "bookmark.fill" : "bookmark")
+                                .foregroundColor(connection.isSaved ? .accentColor : .secondary)
+                            Text(connection.isSaved ? "Saved" : "Save Connection")
+                                .font(.callout)
+                        }
+                    }
+                    .disabled(connection.host.isEmpty || connection.username.isEmpty)
+
+                    Spacer()
                 }
             }
             .padding()

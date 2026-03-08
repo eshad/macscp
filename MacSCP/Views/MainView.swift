@@ -317,7 +317,7 @@ struct MainView: View {
             do {
                 let connected = try await service.testConnection()
                 if connected {
-                    connectionManager.saveConnection(connection)
+                    connectionManager.addToHistory(connection)
                     let home = try await service.homeDirectory()
                     let files = try await service.listFiles(at: home)
                     await MainActor.run {
