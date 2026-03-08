@@ -90,6 +90,7 @@ class TransferManager: ObservableObject {
         let sshTarget = connection.sshTarget
         let scpPortArgs = connection.scpPortArgs
         let sshIdentityArgs = connection.sshIdentityArgs
+        let sshPortArgs = connection.sshPortArgs
         let escapedRemotePath = scpEscapeRemotePath(remotePath)
         let tmpDir = NSTemporaryDirectory()
         let tabId = task.tabId
@@ -97,23 +98,32 @@ class TransferManager: ObservableObject {
         // Everything happens on the background queue - no crossing threads
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
             process.currentDirectoryURL = URL(fileURLWithPath: tmpDir)
 
-            var args = ["-r"]
-            args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
-            args.append(contentsOf: scpPortArgs)
-            args.append(contentsOf: sshIdentityArgs)
-
             if direction == .upload {
-                args.append(localPath)
-                args.append("\(sshTarget):\(escapedRemotePath)")
-            } else {
-                args.append("\(sshTarget):\(escapedRemotePath)")
-                args.append(localPath)
-            }
+                // Use rsync with sudo on remote side for direct upload with permissions
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/rsync")
+                var sshCmd = "ssh -o StrictHostKeyChecking=no"
+                for arg in sshPortArgs { sshCmd += " \(arg)" }
+                for arg in sshIdentityArgs { sshCmd += " \(arg)" }
 
-            process.arguments = args
+                var args = ["-r", "--progress"]
+                args.append(contentsOf: ["-e", sshCmd])
+                args.append("--rsync-path=sudo rsync")
+                args.append(localPath)
+                args.append("\(sshTarget):\(remotePath)")
+                process.arguments = args
+            } else {
+                // Downloads use regular scp
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
+                var args = ["-r"]
+                args.append(contentsOf: ["-o", "StrictHostKeyChecking=no"])
+                args.append(contentsOf: scpPortArgs)
+                args.append(contentsOf: sshIdentityArgs)
+                args.append("\(sshTarget):\(escapedRemotePath)")
+                args.append(localPath)
+                process.arguments = args
+            }
 
             let stderrPipe = Pipe()
             process.standardError = stderrPipe
