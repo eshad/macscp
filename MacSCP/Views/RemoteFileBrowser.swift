@@ -124,6 +124,19 @@ struct RemoteFileBrowser: View {
                     itemsToDelete = Array(selectedItems)
                     showDeleteConfirm = true
                 }
+            }, onArrowUp: {
+                moveSelection(by: -1)
+            }, onArrowDown: {
+                moveSelection(by: 1)
+            }, onReturn: {
+                if let item = selectedItems.first, selectedItems.count == 1 {
+                    if item.isDirectory {
+                        navigateTo(item.fullPath)
+                        selectedItems.removeAll()
+                    } else if item.isEditableText, let onEditFile = onEditFile {
+                        onEditFile(item)
+                    }
+                }
             })
             .frame(width: 0, height: 0)
         )
@@ -415,6 +428,20 @@ struct RemoteFileBrowser: View {
             }
         }
         .padding(24)
+    }
+
+    // MARK: - Selection
+
+    private func moveSelection(by offset: Int) {
+        let items = sortedFiles
+        guard !items.isEmpty else { return }
+        if let current = selectedItems.first, selectedItems.count == 1,
+           let index = items.firstIndex(of: current) {
+            let newIndex = min(max(index + offset, 0), items.count - 1)
+            selectedItems = [items[newIndex]]
+        } else {
+            selectedItems = [items[offset > 0 ? 0 : items.count - 1]]
+        }
     }
 
     // MARK: - Actions

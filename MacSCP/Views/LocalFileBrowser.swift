@@ -206,9 +206,30 @@ struct LocalFileBrowser: View {
                 if !selectedItems.isEmpty {
                     showDeleteConfirm = true
                 }
+            }, onArrowUp: {
+                moveSelection(by: -1)
+            }, onArrowDown: {
+                moveSelection(by: 1)
+            }, onReturn: {
+                if let item = selectedItems.first, selectedItems.count == 1, item.isDirectory {
+                    navigateTo(item.fullPath)
+                    selectedItems.removeAll()
+                }
             })
             .frame(width: 0, height: 0)
         )
+    }
+
+    private func moveSelection(by offset: Int) {
+        let items = sortedFiles
+        guard !items.isEmpty else { return }
+        if let current = selectedItems.first, selectedItems.count == 1,
+           let index = items.firstIndex(of: current) {
+            let newIndex = min(max(index + offset, 0), items.count - 1)
+            selectedItems = [items[newIndex]]
+        } else {
+            selectedItems = [items[offset > 0 ? 0 : items.count - 1]]
+        }
     }
 
     private func deleteSelectedItems() {

@@ -209,22 +209,34 @@ struct ColumnDragHandle: View {
 struct KeyEventHandler: NSViewRepresentable {
     let onSelectAll: () -> Void
     let onDelete: () -> Void
+    var onArrowUp: (() -> Void)?
+    var onArrowDown: (() -> Void)?
+    var onReturn: (() -> Void)?
 
     func makeNSView(context: Context) -> KeyEventView {
         let view = KeyEventView()
         view.onSelectAll = onSelectAll
         view.onDelete = onDelete
+        view.onArrowUp = onArrowUp
+        view.onArrowDown = onArrowDown
+        view.onReturn = onReturn
         return view
     }
 
     func updateNSView(_ nsView: KeyEventView, context: Context) {
         nsView.onSelectAll = onSelectAll
         nsView.onDelete = onDelete
+        nsView.onArrowUp = onArrowUp
+        nsView.onArrowDown = onArrowDown
+        nsView.onReturn = onReturn
     }
 
     class KeyEventView: NSView {
         var onSelectAll: (() -> Void)?
         var onDelete: (() -> Void)?
+        var onArrowUp: (() -> Void)?
+        var onArrowDown: (() -> Void)?
+        var onReturn: (() -> Void)?
         private var monitor: Any?
 
         override func viewDidMoveToWindow() {
@@ -242,6 +254,24 @@ struct KeyEventHandler: NSViewRepresentable {
                     // Delete / Backspace
                     if event.keyCode == 51 || event.keyCode == 117 {
                         self.onDelete?()
+                        return nil
+                    }
+
+                    // Arrow Up (keyCode 126)
+                    if event.keyCode == 126 {
+                        self.onArrowUp?()
+                        return nil
+                    }
+
+                    // Arrow Down (keyCode 125)
+                    if event.keyCode == 125 {
+                        self.onArrowDown?()
+                        return nil
+                    }
+
+                    // Return / Enter (keyCode 36 or 76)
+                    if event.keyCode == 36 || event.keyCode == 76 {
+                        self.onReturn?()
                         return nil
                     }
 
