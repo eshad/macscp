@@ -30,7 +30,7 @@ actor SFTPService {
     /// Delete a file or directory
     func delete(at path: String, isDirectory: Bool) async throws {
         let flag = isDirectory ? "-rf" : "-f"
-        _ = try await ssh.execute("rm \(flag) \(escapePath(path))")
+        _ = try await ssh.execute("sudo rm \(flag) \(escapePath(path))")
     }
 
     /// Delete multiple files/directories in a single SSH command
@@ -38,7 +38,7 @@ actor SFTPService {
         guard !items.isEmpty else { return }
         let commands = items.map { item in
             let flag = item.isDirectory ? "-rf" : "-f"
-            return "rm \(flag) \(escapePath(item.path))"
+            return "sudo rm \(flag) \(escapePath(item.path))"
         }
         _ = try await ssh.execute(commands.joined(separator: " && "))
     }
