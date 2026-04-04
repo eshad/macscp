@@ -48,22 +48,7 @@ No third-party dependencies. Uses the system SSH/SCP binaries via `Process`.
 
 Download the latest `.dmg` from [Releases](https://github.com/eshad/macscp/releases), open it, and drag **MacSCP** to **Applications**.
 
-### Build from Source
 
-```bash
-git clone git@github.com:eshad/macscp.git
-cd macscp
-
-# Build
-swiftc -o build/MacSCP \
-  -target arm64-apple-macosx13.0 \
-  -sdk $(xcrun --show-sdk-path) \
-  -swift-version 5 -O \
-  MacSCP/**/*.swift MacSCP/*.swift
-
-# Or open in Xcode
-open MacSCP.xcodeproj
-```
 ## License
 
 MIT
