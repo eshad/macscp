@@ -64,34 +64,6 @@ swiftc -o build/MacSCP \
 # Or open in Xcode
 open MacSCP.xcodeproj
 ```
-
-## Project Structure
-
-```
-MacSCP/
-├── MacSCPApp.swift              # App entry point
-├── Models/
-│   ├── ServerConnection.swift   # Connection model + persistence
-│   ├── FileItem.swift           # File/folder model
-│   └── TransferTask.swift       # Transfer job with progress tracking
-├── Services/
-│   ├── SSHService.swift         # SSH command execution via Process
-│   ├── SFTPService.swift        # Remote file operations (ls, rm, mv, mkdir)
-│   └── TransferManager.swift    # Concurrent transfer queue (up to 3)
-├── Views/
-│   ├── MainView.swift           # Dual-pane layout
-│   ├── ConnectionView.swift     # Connect dialog
-│   ├── LocalFileBrowser.swift   # Left pane
-│   ├── RemoteFileBrowser.swift  # Right pane
-│   ├── FileRowView.swift        # File row component
-│   ├── TransferQueueView.swift  # Bottom transfer panel
-│   ├── ConnectionManagerView.swift
-│   └── ToolbarView.swift
-└── Utilities/
-    ├── FileHelper.swift         # Local filesystem helpers
-    └── SSHKeyManager.swift      # SSH key discovery
-```
-
 ## License
 
 MIT
